@@ -5,9 +5,10 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f5f2eb;
-  color: #1a1a1a;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #fbf9f1;
+  color: #191919;
+  -webkit-font-smoothing: antialiased;
 }
 
 .app {
@@ -20,12 +21,12 @@ body {
   display: flex;
   gap: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid #c4c7c7;
   margin-bottom: 24px;
 }
 
 .nav a {
-  color: #1a1a1a;
+  color: #191919;
   text-decoration: none;
   font-weight: 500;
 }
@@ -34,13 +35,31 @@ body {
   color: #4f46e5;
 }
 
-/* ── Login page ── */
+/* ===================================================
+   SHARED AUTH PAGE TOKENS
+   =================================================== */
+
+:root {
+  --surface:          #fbf9f1;
+  --surface-container:#f0eee6;
+  --paper-depth:      #E6E1D3;
+  --charcoal:         #191919;
+  --on-surface-var:   #444748;
+  --outline-var:      #c4c7c7;
+  --outline:          #747878;
+  --error:            #ba1a1a;
+  --paper-bright:     #F0EEE6;
+}
+
+/* ===================================================
+   LOGIN PAGE
+   =================================================== */
 
 .login-page {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #f5f2eb;
+  background: var(--surface);
 }
 
 .login-main {
@@ -57,10 +76,12 @@ body {
   border-radius: 20px;
   overflow: hidden;
   margin-bottom: 32px;
-  background: #e8f4f8;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-var);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 
 .login-logo {
@@ -70,18 +91,21 @@ body {
 }
 
 .login-heading {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Source Serif 4', Georgia, serif;
   font-size: 42px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.15;
   text-align: center;
-  color: #1a1a1a;
+  color: var(--charcoal);
   margin-bottom: 12px;
+  letter-spacing: -0.02em;
 }
 
 .login-subtitle {
-  font-size: 17px;
-  color: #6b6b6b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--on-surface-var);
   text-align: center;
   margin-bottom: 36px;
 }
@@ -101,57 +125,64 @@ body {
 }
 
 .login-field label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  color: #1a1a1a;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--on-surface-var);
   text-transform: uppercase;
 }
 
 .login-field input {
   padding: 14px 16px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid var(--outline-var);
   border-radius: 8px;
-  font-size: 15px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
   background: #fff;
-  color: #1a1a1a;
-  transition: border-color 0.15s;
+  color: var(--charcoal);
+  transition: border-color 0.2s;
 }
 
 .login-field input::placeholder {
-  color: #a0a0a0;
+  color: var(--outline);
 }
 
 .login-field input:focus {
   outline: none;
-  border-color: #1a1a1a;
+  border-color: var(--charcoal);
 }
 
 .login-error {
-  color: #dc2626;
+  color: var(--error);
   font-size: 14px;
   text-align: center;
 }
 
 .login-btn {
   margin-top: 8px;
-  padding: 14px;
-  background: #1a1a1a;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 500;
+  padding: 16px;
+  background: var(--charcoal);
+  color: var(--paper-bright);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity 0.15s, transform 0.1s;
 }
 
 .login-btn:hover {
-  background: #333;
+  opacity: 0.9;
+}
+
+.login-btn:active {
+  transform: scale(0.98);
 }
 
 .login-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -164,7 +195,7 @@ body {
 }
 
 .login-forgot {
-  color: #1a1a1a;
+  color: var(--charcoal);
   font-size: 15px;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -176,39 +207,609 @@ body {
 
 .login-or {
   font-size: 14px;
-  color: #6b6b6b;
+  color: var(--on-surface-var);
   font-style: italic;
 }
 
-.login-signup {
+.login-signup-link {
   font-size: 15px;
-  color: #1a1a1a;
+  color: var(--charcoal);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.login-signup-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Shared footer (login + request) ── */
+
+.login-footer,
+.req-footer {
+  background: var(--paper-depth);
+  border-top: 1px solid var(--outline-var);
+  padding: 80px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.login-footer-brand,
+.req-footer-brand {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--charcoal);
+}
+
+.login-footer-copy,
+.req-footer-copy {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--on-surface-var);
+  text-transform: uppercase;
+}
+
+/* ===================================================
+   REQUEST ACCOUNT PAGE
+   =================================================== */
+
+.req-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--surface);
+}
+
+.req-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+}
+
+.req-content {
+  width: 100%;
+  max-width: 448px;
+}
+
+.req-logo-wrapper {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 auto 32px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-var);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.req-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.req-heading {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 40px;
+  text-align: center;
+  color: var(--charcoal);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.req-subtitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--on-surface-var);
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* Form card */
+
+.req-card {
+  background: var(--surface-container);
+  padding: 32px;
+  border-radius: 4px;
+  border: 1px solid var(--outline-var);
+}
+
+.req-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.req-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.req-field label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--on-surface-var);
+}
+
+.req-field input,
+.req-field textarea {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--outline-var);
+  padding: 8px 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--charcoal);
+  transition: border-color 0.3s;
+  border-radius: 0;
+  resize: none;
+}
+
+.req-field input::placeholder,
+.req-field textarea::placeholder {
+  color: var(--outline);
+}
+
+.req-field input:focus,
+.req-field textarea:focus {
+  outline: none;
+  border-bottom-color: var(--charcoal);
+  box-shadow: none;
+}
+
+.req-error {
+  color: var(--error);
+  font-size: 14px;
+  text-align: center;
+}
+
+.req-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 16px;
+  background: var(--charcoal);
+  color: var(--paper-bright);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.req-btn:hover {
+  opacity: 0.9;
+}
+
+.req-btn:active {
+  transform: scale(0.98);
+}
+
+.req-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Bottom link */
+
+.req-bottom-link {
+  margin-top: 32px;
+  text-align: center;
+  font-size: 16px;
+  color: var(--on-surface-var);
+}
+
+.req-signin-link {
+  color: var(--charcoal);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.req-signin-link:hover {
+  text-decoration: underline;
+}
+
+/* ===================================================
+   MFA ENROLLMENT / VERIFY PAGE
+   =================================================== */
+
+.mfa-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--surface);
+}
+
+.mfa-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 96px 40px 48px;
+}
+
+.mfa-loading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  color: var(--on-surface-var);
+}
+
+/* ── Enrollment card ── */
+
+.mfa-card {
+  width: 100%;
+  max-width: 768px;
+  background: #f6f4ec;
+  border: 1px solid var(--outline-var);
+  padding: 40px;
+  position: relative;
+}
+
+.mfa-card--narrow {
+  max-width: 448px;
+}
+
+@media (min-width: 768px) {
+  .mfa-card {
+    padding: 64px;
+  }
+}
+
+.mfa-corner-accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 48px;
+  height: 48px;
+  border-top: 2px solid rgba(25, 25, 25, 0.1);
+  border-right: 2px solid rgba(25, 25, 25, 0.1);
+  pointer-events: none;
+}
+
+/* ── Breadcrumb ── */
+
+.mfa-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.mfa-breadcrumb-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #878478;
+}
+
+.mfa-breadcrumb-line {
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: var(--outline-var);
+}
+
+.mfa-breadcrumb-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--charcoal);
+}
+
+/* ── Header ── */
+
+.mfa-header {
+  margin-bottom: 48px;
+}
+
+.mfa-heading {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 40px;
+  color: var(--charcoal);
+  margin-bottom: 16px;
+}
+
+.mfa-description {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--on-surface-var);
+  max-width: 540px;
+}
+
+/* ── Two-column setup ── */
+
+.mfa-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+@media (min-width: 768px) {
+  .mfa-setup {
+    flex-direction: row;
+    gap: 64px;
+    align-items: flex-start;
+  }
+
+  .mfa-qr-section,
+  .mfa-right-section {
+    flex: 1;
+  }
+}
+
+/* ── Step labels ── */
+
+.mfa-step-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #878478;
+  margin-bottom: 16px;
+}
+
+/* ── QR section ── */
+
+.mfa-qr-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.mfa-qr-frame {
+  aspect-ratio: 1;
+  width: 100%;
+  background: var(--paper-depth);
+  border: 1px solid var(--outline-var);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  margin-bottom: 12px;
+}
+
+.mfa-qr-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mfa-qr-placeholder {
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--charcoal);
+}
+
+.mfa-qr-caption {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--on-surface-var);
+  font-style: italic;
+}
+
+/* ── Right column ── */
+
+.mfa-right-section {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* ── Manual key ── */
+
+.mfa-manual {
+  display: flex;
+  flex-direction: column;
+}
+
+.mfa-manual-input-wrapper {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.mfa-manual-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--outline-var);
+  padding: 12px 40px 12px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: var(--charcoal);
+  transition: border-color 0.2s;
+}
+
+.mfa-manual-input:focus {
+  outline: none;
+  border-bottom-color: var(--charcoal);
+}
+
+.mfa-copy-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--on-surface-var);
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.15s;
+}
+
+.mfa-copy-btn:hover {
+  color: var(--charcoal);
+}
+
+.mfa-hint {
+  font-size: 12px;
+  color: #878478;
+  line-height: 16px;
+}
+
+/* ── Verification code input ── */
+
+.mfa-verify-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.mfa-verify-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mfa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mfa-field label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #878478;
+}
+
+.mfa-code-input {
+  width: 100%;
+  background: var(--paper-bright);
+  border: 1px solid var(--outline-var);
+  padding: 16px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px;
+  letter-spacing: 0.5em;
+  color: var(--charcoal);
+  transition: border-color 0.2s;
+  margin-bottom: 8px;
+}
+
+.mfa-code-input::placeholder {
+  color: var(--outline-var);
+}
+
+.mfa-code-input:focus {
+  outline: none;
+  border-color: var(--charcoal);
+  box-shadow: 0 0 0 1px var(--charcoal);
+}
+
+/* ── Error ── */
+
+.mfa-error {
+  color: var(--error);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ── Submit button ── */
+
+.mfa-btn {
+  width: 100%;
+  padding: 20px;
+  background: var(--charcoal);
+  color: var(--paper-bright);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  margin-top: 8px;
+}
+
+.mfa-btn:hover {
+  opacity: 0.9;
+}
+
+.mfa-btn:active {
+  transform: scale(0.98);
+}
+
+.mfa-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Footer ── */
 
-.login-footer {
-  background: #2c2c2c;
-  padding: 36px 32px;
+.mfa-footer {
+  background: var(--paper-depth);
+  border-top: 1px solid var(--outline-var);
+  padding: 48px 40px;
+}
+
+.mfa-footer-inner {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
-.login-footer-brand {
-  color: #fff;
-  font-size: 16px;
+@media (min-width: 768px) {
+  .mfa-footer-inner {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+.mfa-footer-brand {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 18px;
   font-weight: 700;
+  color: var(--charcoal);
 }
 
-.login-footer-copy {
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: #999;
+.mfa-footer-copy {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: #878478;
   text-transform: uppercase;
 }
 
-/* ── Generic form (used on other pages) ── */
+/* ===================================================
+   GENERIC FORM (other pages like MFA)
+   =================================================== */
 
 .form {
   display: flex;

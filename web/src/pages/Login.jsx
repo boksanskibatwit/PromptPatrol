@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import logo from './PromptPatrol.png';
 
@@ -84,7 +84,7 @@ export default function Login() {
         <div className="login-links">
           <a href="#" className="login-forgot">Forgot password?</a>
           <span className="login-or">or</span>
-          <span className="login-signup">Don't have an account?</span>
+          <Link to="/request-account" className="login-signup-link">Don't have an account?</Link>
         </div>
       </main>
 

@@ -2,17 +2,27 @@ import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import MFA from './pages/Mfa.jsx';
+import RequestAccount from './pages/RequestAccount.jsx';
 
 function Dashboard() {
   return <h1>Dashboard (Logged in)</h1>;
 }
 
+/* Pages that render full-viewport (no shared nav bar) */
+const FULL_PAGE_ROUTES = ['/login', '/request-account', '/mfa'];
+
 export default function App() {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  const isFullPage = FULL_PAGE_ROUTES.includes(location.pathname);
 
-  if (isLoginPage) {
-    return <Login />;
+  if (isFullPage) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/request-account" element={<RequestAccount />} />
+        <Route path="/mfa" element={<MFA />} />
+      </Routes>
+    );
   }
 
   return (
