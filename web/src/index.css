@@ -1,11 +1,12 @@
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f7f7f8;
+  background: #f5f2eb;
   color: #1a1a1a;
 }
 
@@ -33,6 +34,182 @@ body {
   color: #4f46e5;
 }
 
+/* ── Login page ── */
+
+.login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f2eb;
+}
+
+.login-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px 40px;
+}
+
+.login-logo-wrapper {
+  width: 140px;
+  height: 140px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 32px;
+  background: #e8f4f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-heading {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.login-subtitle {
+  font-size: 17px;
+  color: #6b6b6b;
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: #1a1a1a;
+  text-transform: uppercase;
+}
+
+.login-field input {
+  padding: 14px 16px;
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #fff;
+  color: #1a1a1a;
+  transition: border-color 0.15s;
+}
+
+.login-field input::placeholder {
+  color: #a0a0a0;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.login-error {
+  color: #dc2626;
+  font-size: 14px;
+  text-align: center;
+}
+
+.login-btn {
+  margin-top: 8px;
+  padding: 14px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.login-btn:hover {
+  background: #333;
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 28px;
+}
+
+.login-forgot {
+  color: #1a1a1a;
+  font-size: 15px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-forgot:hover {
+  color: #555;
+}
+
+.login-or {
+  font-size: 14px;
+  color: #6b6b6b;
+  font-style: italic;
+}
+
+.login-signup {
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+/* ── Footer ── */
+
+.login-footer {
+  background: #2c2c2c;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-footer-brand {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.login-footer-copy {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #999;
+  text-transform: uppercase;
+}
+
+/* ── Generic form (used on other pages) ── */
+
 .form {
   display: flex;
   flex-direction: column;
@@ -59,11 +236,4 @@ body {
 
 .form button:hover {
   background: #4338ca;
-}
-
-.login {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
 }
