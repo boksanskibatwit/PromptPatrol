@@ -15,3 +15,15 @@ Migration files are located in `/supabase/migrations` and **must be run in order
 8. `08_create_audit_log_entries.sql`
 
 To run: copy the contents of each file into the Supabase SQL editor and execute them one at a time in the order listed above.
+
+
+To run web commmands
+
+install node.ns from web https://nodejs.org/en/download?utm_source=chatgpt.com 
+
+-reload vs code
+-npm install
+
+TO RUN WEBSITE be in ./web
+-npm run dev 
+
