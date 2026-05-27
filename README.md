@@ -19,7 +19,7 @@ To run: copy the contents of each file into the Supabase SQL editor and execute 
 
 To run web commmands
 
-install node.ns from web https://nodejs.org/en/download?utm_source=chatgpt.com 
+install node.ns from web https://nodejs.org/en/download
 
 -reload vs code
 -npm install
