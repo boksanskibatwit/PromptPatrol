@@ -1,5 +1,5 @@
 # PromptPatrol
-
+PromptPatrol is an enterprise-grade AI governance tool designed for financial companies operating under FTC data privacy regulations. The system enforces a structured, auditable workflow that governs how customer information is submitted to AI models. This ensures every interaction is authenticated, reviewed, approved, and then recorded before any sensitive data leaves the organization's network. 
 
 ## Database Migrations
 
