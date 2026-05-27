@@ -1,7 +1,1 @@
 node_modules
-dist
-build
-
-.vite
-.DS_Store
-Thumbs.db
