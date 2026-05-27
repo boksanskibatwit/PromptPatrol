@@ -27,3 +27,6 @@ install node.ns from web https://nodejs.org/en/download?utm_source=chatgpt.com
 TO RUN WEBSITE be in ./web
 -npm run dev 
 
+## Backend Environment Setup
+ 
+The backend requires a local copy of `.env`  to run. Copy the `.env` file from the OneDrive
