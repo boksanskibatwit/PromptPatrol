@@ -30,3 +30,10 @@ TO RUN WEBSITE be in ./web
 ## Backend Environment Setup
  
 The backend requires a local copy of `.env`  to run. Copy the `.env` file from the OneDrive
+
+## Install backend dependancies
+How to run in powershell:
+`cd backend`
+`python -m venv venv`
+`.\venv\Scripts\Activate.ps1`
+`pip install -r requirements.txt`

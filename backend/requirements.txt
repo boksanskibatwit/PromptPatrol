@@ -1,0 +1,16 @@
+# PromptPatrol backend dependencies
+# supabase pinned to 2.25.1 — last version before pyiceberg was introduced
+# as a dependency (2.26.0+). Fails to build on Windows. No functionality
+# lost since PromptPatrol uses AWS S3, not Supabase Storage.
+
+# How to run in powershell:
+# cd backend
+# python -m venv venv
+# .\venv\Scripts\Activate.ps1
+# pip install -r requirements.txt
+fastapi==0.136.3           # web framework that defines the backend API and routes
+uvicorn[standard]==0.48.0  # ASGI server that actually runs the FastAPI app
+supabase==2.25.1           # client for all DB + auth calls to the Supabase backend
+pydantic-settings==2.14.1  # loads the .env file into the typed settings object
+pyotp==2.9.0               # generates/verifies TOTP codes for Google Authenticator MFA
+python-multipart==0.0.30   # lets FastAPI receive uploaded document files
