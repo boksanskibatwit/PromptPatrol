@@ -3,13 +3,11 @@ import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import MFA from './pages/Mfa.jsx';
 import RequestAccount from './pages/RequestAccount.jsx';
-
-function Dashboard() {
-  return <h1>Dashboard (Logged in)</h1>;
-}
+import Dashboard from './pages/Dashboard.jsx';
+import Redact from './pages/Redact.jsx';
 
 /* Pages that render full-viewport (no shared nav bar) */
-const FULL_PAGE_ROUTES = ['/login', '/request-account', '/mfa'];
+const FULL_PAGE_ROUTES = ['/login', '/request-account', '/mfa', '/dashboard', '/redact'];
 
 export default function App() {
   const location = useLocation();
@@ -21,6 +19,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/request-account" element={<RequestAccount />} />
         <Route path="/mfa" element={<MFA />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/redact" element={<Redact />} />
       </Routes>
     );
   }
@@ -34,8 +34,6 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/mfa" element={<MFA />} />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<p>Not found</p>} />
       </Routes>
     </div>
