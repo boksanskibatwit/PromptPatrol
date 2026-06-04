@@ -135,11 +135,6 @@ def is_routing_context(text, start, end):
     return "routing" in window or "aba" in window
 
 
-def filter_driver_license(results):
-    return [
-        r for r in results
-        if r.entity_type != "US_DRIVER_LICENSE"
-    ]
 
 
 # =========================
@@ -191,8 +186,6 @@ def redact(text: str):
     for r in results:
         r.entity_type = ENTITY_MAP.get(r.entity_type, r.entity_type)
         
-    # remove fake driver licenses
-    results = filter_driver_license(results)
 
     # validate credit cards (Luhn)
     results = filter_credit_cards(text, results)

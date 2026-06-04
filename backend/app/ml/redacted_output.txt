@@ -1,0 +1,43 @@
+<PERSON> met with <PERSON> on <DOB> to finalize onboarding at Fidelity Investments.
+
+His SSN is <SSN> and must be protected.
+
+Backup SSNs:
+- <SSN>
+- <SSN>
+- <SSN>
+- <SSN>
+
+Contact information:
+Email primary: <EMAIL>
+Email secondary: <EMAIL>
+Email backup: <EMAIL>
+
+Phone numbers:
+Primary: <PHONE>
+Secondary: <PHONE>
+International-style (noise): <PHONE>
+
+Credit cards:
+Visa: <CREDIT_CARD>
+MasterCard: <CREDIT_CARD>
+Amex: <CREDIT_CARD>
+Invalid card noise: 1234 5678 9012 3456
+
+Banking info:
+Routing number: <PHONE>
+Random 9-digit noise: <ROUTING>
+Long number noise: <ROUTING>
+
+Personal details:
+<PERSON> (DOB <DOB>) lives at 15 <LOCATION>, <LOCATION>, <LOCATION>.
+<PERSON> (DOB <DOB>) previously worked at Google and Microsoft Research.
+
+Mixed sentence:
+<PERSON> emailed <EMAIL> while using SSN <SSN> and card <CREDIT_CARD>.
+
+Edge cases:
+SSN embedded: 123-45-6789x123
+Broken SSN: 123-45-678
+Weird formatting: SSN:<SSN>
+Extra noise text: call me at <PHONE> tomorrow
