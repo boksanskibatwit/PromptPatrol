@@ -91,6 +91,15 @@ export default function Dashboard() {
         return;
       }
       if (active) setEmail(session.user?.email ?? '');
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      if (profile?.role === 'admin') {
+        navigate('/admin');
+        return;
+      }
       await reload();
     }
     init();
@@ -142,14 +151,14 @@ export default function Dashboard() {
 
   function handleFileChange(e) {
     const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-selecting the same file later
+    e.target.value = ''; // allow reselecting the same file later
     if (!file) return;
     // Original stays in memory only; redaction happens before any storage.
     setPendingUpload(file);
     navigate('/redact');
   }
 
-  // View/download go through top-level navigation (no CORS needed); they
+  // View/download go through top level navigation (no CORS needed); they
   // require the GET method to be enabled on the API Gateway.
   function handleView(doc) {
     setRowMenu(null);
@@ -240,23 +249,6 @@ export default function Dashboard() {
               <span className="dash-eyebrow">Dashboard</span>
               <h1 className="dash-title">My Documents</h1>
             </div>
-            <button
-              type="button"
-              className="dash-upload-btn"
-              onClick={handleUploadClick}
-            >
-              <span className="material-symbols-outlined dash-upload-icon">
-                add
-              </span>
-              Upload
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,.txt,.rtf"
-              hidden
-              onChange={handleFileChange}
-            />
           </div>
 
           {/* Filter controls */}
@@ -301,6 +293,24 @@ export default function Dashboard() {
                 {filtered.length} document{filtered.length === 1 ? '' : 's'} found
               </span>
             </div>
+
+            <button
+              type="button"
+              className="dash-upload-btn"
+              onClick={handleUploadClick}
+            >
+              <span className="material-symbols-outlined dash-upload-icon">
+                add
+              </span>
+              Upload
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt,.rtf"
+              hidden
+              onChange={handleFileChange}
+            />
           </div>
 
           {actionError && <p className="dash-action-error">{actionError}</p>}

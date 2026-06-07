@@ -5,9 +5,11 @@ import MFA from './pages/Mfa.jsx';
 import RequestAccount from './pages/RequestAccount.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Redact from './pages/Redact.jsx';
+import AdminPanel from './pages/AdminPanel.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 /* Pages that render full-viewport (no shared nav bar) */
-const FULL_PAGE_ROUTES = ['/login', '/request-account', '/mfa', '/dashboard', '/redact'];
+const FULL_PAGE_ROUTES = ['/login', '/request-account', '/mfa', '/dashboard', '/redact', '/admin', '/reset-password'];
 
 export default function App() {
   const location = useLocation();
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="/mfa" element={<MFA />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/redact" element={<Redact />} />
+        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     );
   }

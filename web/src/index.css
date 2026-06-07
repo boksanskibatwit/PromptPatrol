@@ -172,6 +172,12 @@ body {
   text-align: center;
 }
 
+.login-success {
+  color: #1b5e20;
+  font-size: 14px;
+  text-align: center;
+}
+
 .login-btn {
   margin-top: 8px;
   padding: 16px;
@@ -208,6 +214,11 @@ body {
 }
 
 .login-forgot {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   color: var(--charcoal);
   font-size: 15px;
   text-decoration: underline;
@@ -900,6 +911,9 @@ body {
 
 .dash-profile {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .dash-profile-btn {
@@ -1773,4 +1787,245 @@ body {
 
 .redact-no--on .material-symbols-outlined {
   color: #fff;
+}
+
+/* ===================================================
+   ADMIN PANEL
+   =================================================== */
+
+/* Header nav (Dashboard ↔ Admin Panel switcher) */
+.dash-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 auto 0 28px;
+}
+
+.dash-header-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--on-surface-var);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.dash-header-nav-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.dash-header-nav-btn:hover {
+  background: var(--surface-container);
+  color: var(--charcoal);
+}
+
+.dash-header-nav-btn--active {
+  background: var(--surface-container);
+  color: var(--cinnabar);
+  border-color: var(--outline-var);
+  font-weight: 600;
+  cursor: default;
+}
+
+.admin-header-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--cinnabar);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+/* Tab bar */
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--outline-var);
+  margin-bottom: 20px;
+}
+
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--on-surface-var);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 4px 4px 0 0;
+  transition: color .15s, border-color .15s;
+  position: relative;
+}
+
+.admin-tab:hover {
+  color: var(--charcoal);
+  background: var(--surface-container);
+}
+
+.admin-tab--active {
+  color: var(--cinnabar);
+  border-bottom-color: var(--cinnabar);
+}
+
+.admin-tab .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.admin-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--cinnabar);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Applicant cell */
+.admin-applicant {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-applicant-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--charcoal);
+}
+
+.admin-applicant-email {
+  font-size: 12px;
+  color: var(--on-surface-var);
+}
+
+/* Status badge */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-badge--pending {
+  background: #fff8e1;
+  color: #7a5c00;
+  border: 1px solid #f5c900;
+}
+
+.admin-badge--approved {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #66bb6a;
+}
+
+.admin-badge--rejected {
+  background: #fce4ec;
+  color: #880e4f;
+  border: 1px solid #f48fb1;
+}
+
+.admin-badge--user {
+  background: #e8eaf6;
+  color: #283593;
+  border: 1px solid #9fa8da;
+}
+
+/* Approve / Reject action buttons */
+.admin-action-btns {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity .15s, background .15s;
+}
+
+.admin-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.admin-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.admin-btn--approve {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-color: #66bb6a;
+}
+
+.admin-btn--approve:hover:not(:disabled) {
+  background: #c8e6c9;
+}
+
+.admin-btn--reject {
+  background: #fce4ec;
+  color: #880e4f;
+  border-color: #f48fb1;
+}
+
+.admin-btn--reject:hover:not(:disabled) {
+  background: #f8bbd0;
+}
+
+.admin-btn--action {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #90caf9;
+}
+
+.admin-btn--action:hover:not(:disabled) {
+  background: #bbdefb;
+}
+
+.admin-reviewed-by {
+  font-size: 12px;
+  color: var(--on-surface-var);
+}
+
+.admin-owner-id {
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  color: var(--on-surface-var);
+  max-width: 180px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
