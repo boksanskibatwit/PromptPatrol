@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
 
+  const [isAdmin, setIsAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [rowMenu, setRowMenu] = useState(null); // open row id
   const [busyId, setBusyId] = useState(null);
@@ -91,6 +92,12 @@ export default function Dashboard() {
         return;
       }
       if (active) setEmail(session.user?.email ?? '');
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      if (active && profile?.role === 'admin') setIsAdmin(true);
       await reload();
     }
     init();
@@ -142,14 +149,14 @@ export default function Dashboard() {
 
   function handleFileChange(e) {
     const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-selecting the same file later
+    e.target.value = ''; // allow reselecting the same file later
     if (!file) return;
     // Original stays in memory only; redaction happens before any storage.
     setPendingUpload(file);
     navigate('/redact');
   }
 
-  // View/download go through top-level navigation (no CORS needed); they
+  // View/download go through top level navigation (no CORS needed); they
   // require the GET method to be enabled on the API Gateway.
   function handleView(doc) {
     setRowMenu(null);
@@ -199,7 +206,21 @@ export default function Dashboard() {
             <span className="dash-brand-name">PromptPatrol</span>
           </div>
 
+          {isAdmin && (
+            <nav className="dash-header-nav">
+              <button type="button" className="dash-header-nav-btn dash-header-nav-btn--active">
+                <span className="material-symbols-outlined">dashboard</span>
+                Dashboard
+              </button>
+              <button type="button" className="dash-header-nav-btn" onClick={() => navigate('/admin')}>
+                <span className="material-symbols-outlined">admin_panel_settings</span>
+                Admin Panel
+              </button>
+            </nav>
+          )}
+
           <div className="dash-profile" ref={menuRef}>
+            {isAdmin && <span className="admin-header-badge">Admin</span>}
             <button
               type="button"
               className="dash-profile-btn"
@@ -214,6 +235,19 @@ export default function Dashboard() {
             {menuOpen && (
               <div className="dash-menu" role="menu">
                 {email && <div className="dash-menu-email">{email}</div>}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="dash-menu-item"
+                    role="menuitem"
+                    onClick={() => navigate('/admin')}
+                  >
+                    <span className="material-symbols-outlined dash-menu-icon">
+                      admin_panel_settings
+                    </span>
+                    Admin Panel
+                  </button>
+                )}
                 <button
                   type="button"
                   className="dash-menu-item"

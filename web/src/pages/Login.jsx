@@ -21,7 +21,12 @@ export default function Login() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      const msg = signInError.message ?? '';
+      if (msg.toLowerCase().includes('banned') || msg.toLowerCase().includes('user banned')) {
+        setError('Your account is pending admin approval. You will be notified once it is reviewed.');
+      } else {
+        setError(msg);
+      }
       setLoading(false);
       return;
     }

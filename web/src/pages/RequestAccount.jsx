@@ -18,15 +18,10 @@ export default function RequestAccount() {
     setError('');
     setLoading(true);
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: name,
-          description,
-        },
-      },
+      options: { data: { full_name: name, description } },
     });
 
     if (signUpError) {
@@ -35,6 +30,37 @@ export default function RequestAccount() {
       return;
     }
 
+    const authUserId = signUpData?.user?.id;
+    if (!authUserId) {
+      setError('Signup succeeded but user ID was missing. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    // Tell the backend to record the request and ban the user until approved.
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL}/admin/signup-ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auth_user_id: authUserId,
+          email,
+          full_name: name,
+          description,
+        }),
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail ?? 'Failed to submit account request.');
+      }
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
+
+    // Sign the new session out — they must wait for admin approval before logging in.
+    await supabase.auth.signOut();
     setSuccess(true);
     setLoading(false);
   }

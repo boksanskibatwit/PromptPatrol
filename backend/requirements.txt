@@ -14,3 +14,4 @@ supabase==2.25.1           # client for all DB + auth calls to the Supabase back
 pydantic-settings==2.14.1  # loads the .env file into the typed settings object
 pyotp==2.9.0               # generates/verifies TOTP codes for Google Authenticator MFA
 python-multipart==0.0.30   # lets FastAPI receive uploaded document files
+httpx==0.28.1              # async HTTP client for Supabase Admin API calls (ban/unban)
