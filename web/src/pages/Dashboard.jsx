@@ -62,7 +62,6 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
 
-  const [isAdmin, setIsAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [rowMenu, setRowMenu] = useState(null); // open row id
   const [busyId, setBusyId] = useState(null);
@@ -97,7 +96,10 @@ export default function Dashboard() {
         .select('role')
         .eq('id', session.user.id)
         .single();
-      if (active && profile?.role === 'admin') setIsAdmin(true);
+      if (profile?.role === 'admin') {
+        navigate('/admin');
+        return;
+      }
       await reload();
     }
     init();
@@ -206,21 +208,7 @@ export default function Dashboard() {
             <span className="dash-brand-name">PromptPatrol</span>
           </div>
 
-          {isAdmin && (
-            <nav className="dash-header-nav">
-              <button type="button" className="dash-header-nav-btn dash-header-nav-btn--active">
-                <span className="material-symbols-outlined">dashboard</span>
-                Dashboard
-              </button>
-              <button type="button" className="dash-header-nav-btn" onClick={() => navigate('/admin')}>
-                <span className="material-symbols-outlined">admin_panel_settings</span>
-                Admin Panel
-              </button>
-            </nav>
-          )}
-
           <div className="dash-profile" ref={menuRef}>
-            {isAdmin && <span className="admin-header-badge">Admin</span>}
             <button
               type="button"
               className="dash-profile-btn"
@@ -235,19 +223,6 @@ export default function Dashboard() {
             {menuOpen && (
               <div className="dash-menu" role="menu">
                 {email && <div className="dash-menu-email">{email}</div>}
-                {isAdmin && (
-                  <button
-                    type="button"
-                    className="dash-menu-item"
-                    role="menuitem"
-                    onClick={() => navigate('/admin')}
-                  >
-                    <span className="material-symbols-outlined dash-menu-icon">
-                      admin_panel_settings
-                    </span>
-                    Admin Panel
-                  </button>
-                )}
                 <button
                   type="button"
                   className="dash-menu-item"
@@ -274,23 +249,6 @@ export default function Dashboard() {
               <span className="dash-eyebrow">Dashboard</span>
               <h1 className="dash-title">My Documents</h1>
             </div>
-            <button
-              type="button"
-              className="dash-upload-btn"
-              onClick={handleUploadClick}
-            >
-              <span className="material-symbols-outlined dash-upload-icon">
-                add
-              </span>
-              Upload
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.docx,.txt,.rtf"
-              hidden
-              onChange={handleFileChange}
-            />
           </div>
 
           {/* Filter controls */}
@@ -335,6 +293,24 @@ export default function Dashboard() {
                 {filtered.length} document{filtered.length === 1 ? '' : 's'} found
               </span>
             </div>
+
+            <button
+              type="button"
+              className="dash-upload-btn"
+              onClick={handleUploadClick}
+            >
+              <span className="material-symbols-outlined dash-upload-icon">
+                add
+              </span>
+              Upload
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt,.rtf"
+              hidden
+              onChange={handleFileChange}
+            />
           </div>
 
           {actionError && <p className="dash-action-error">{actionError}</p>}

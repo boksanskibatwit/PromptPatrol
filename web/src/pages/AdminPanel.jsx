@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { setPendingUpload } from '../lib/uploadHandoff';
+import { objectKeyFor, objectUrl } from '../lib/storage';
 import logo from './PromptPatrol.png';
 
 const PAGE_SIZE = 10;
@@ -58,6 +60,7 @@ export default function AdminPanel() {
 
   const [tab, setTab] = useState('documents'); // 'documents' | 'users' | 'requests'
   const [email, setEmail] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -78,6 +81,11 @@ export default function AdminPanel() {
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [userPage, setUserPage] = useState(1);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [busyDelete, setBusyDelete] = useState(false);
+  const [confirmMfaId, setConfirmMfaId] = useState(null);
+  const [busyMfa, setBusyMfa] = useState(false);
+  const [userActionError, setUserActionError] = useState('');
 
   // Documents state
   const [documents, setDocuments] = useState([]);
@@ -86,6 +94,9 @@ export default function AdminPanel() {
   const [docSearch, setDocSearch] = useState('');
   const [docStatusFilter, setDocStatusFilter] = useState('all');
   const [docPage, setDocPage] = useState(1);
+  const [docRowMenu, setDocRowMenu] = useState(null);
+  const [docActionError, setDocActionError] = useState('');
+  const fileInputRef = useRef(null);
 
   const loadRequests = useCallback(async () => {
     setReqLoading(true);
@@ -138,7 +149,10 @@ export default function AdminPanel() {
         return;
       }
 
-      if (active) setEmail(session.user?.email ?? '');
+      if (active) {
+        setEmail(session.user?.email ?? '');
+        setCurrentUserId(session.user?.id ?? null);
+      }
       await Promise.all([loadRequests(), loadDocuments(), loadUsers()]);
     }
     init();
@@ -150,6 +164,7 @@ export default function AdminPanel() {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
+      if (!e.target.closest?.('.dash-actions')) setDocRowMenu(null);
     }
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -158,6 +173,35 @@ export default function AdminPanel() {
   async function handleSignOut() {
     await supabase.auth.signOut();
     navigate('/login');
+  }
+
+  // ── Document actions ─────────────────────────────────────────────────────
+
+  function handleUploadClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setPendingUpload(file);
+    navigate('/redact');
+  }
+
+  function handleView(doc) {
+    setDocRowMenu(null);
+    window.open(objectUrl(objectKeyFor(doc.id, doc.file_type)), '_blank', 'noopener');
+  }
+
+  function handleDownload(doc) {
+    setDocRowMenu(null);
+    const a = document.createElement('a');
+    a.href = objectUrl(objectKeyFor(doc.id, doc.file_type));
+    a.download = doc.original_filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   // ── Account request actions ──────────────────────────────────────────────
@@ -187,6 +231,57 @@ export default function AdminPanel() {
       setReqActionError(e.message);
     } finally {
       setBusyReq(null);
+    }
+  }
+
+  // ── User delete ──────────────────────────────────────────────────────────
+
+  async function handleResetMfa(userId) {
+    setUserActionError('');
+    setBusyMfa(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/users/${userId}/reset-mfa`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        },
+      );
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail ?? 'Failed to reset MFA.');
+      }
+      setConfirmMfaId(null);
+    } catch (e) {
+      setUserActionError(e.message);
+    } finally {
+      setBusyMfa(false);
+    }
+  }
+
+  async function handleDeleteUser(userId) {
+    setUserActionError('');
+    setBusyDelete(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/users/${userId}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        },
+      );
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail ?? 'Failed to delete user.');
+      }
+      setConfirmDeleteId(null);
+      await loadUsers();
+    } catch (e) {
+      setUserActionError(e.message);
+    } finally {
+      setBusyDelete(false);
     }
   }
 
@@ -256,16 +351,6 @@ export default function AdminPanel() {
             <span className="dash-brand-name">PromptPatrol</span>
           </div>
 
-          <nav className="dash-header-nav">
-            <button type="button" className="dash-header-nav-btn" onClick={() => navigate('/dashboard')}>
-              <span className="material-symbols-outlined">dashboard</span>
-              Dashboard
-            </button>
-            <button type="button" className="dash-header-nav-btn dash-header-nav-btn--active">
-              <span className="material-symbols-outlined">admin_panel_settings</span>
-              Admin Panel
-            </button>
-          </nav>
 
           <div className="dash-profile" ref={menuRef}>
             <span className="admin-header-badge">Admin</span>
@@ -283,15 +368,6 @@ export default function AdminPanel() {
             {menuOpen && (
               <div className="dash-menu" role="menu">
                 {email && <div className="dash-menu-email">{email}</div>}
-                <button
-                  type="button"
-                  className="dash-menu-item"
-                  role="menuitem"
-                  onClick={() => navigate('/dashboard')}
-                >
-                  <span className="material-symbols-outlined dash-menu-icon">dashboard</span>
-                  My Dashboard
-                </button>
                 <button
                   type="button"
                   className="dash-menu-item"
@@ -517,7 +593,21 @@ export default function AdminPanel() {
                   <span className="material-symbols-outlined dash-count-icon">info</span>
                   <span>{filteredDocs.length} document{filteredDocs.length === 1 ? '' : 's'}</span>
                 </div>
+
+                <button type="button" className="dash-upload-btn" onClick={handleUploadClick}>
+                  <span className="material-symbols-outlined dash-upload-icon">add</span>
+                  Upload
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt,.rtf"
+                  hidden
+                  onChange={handleFileChange}
+                />
               </div>
+
+              {docActionError && <p className="dash-action-error">{docActionError}</p>}
 
               <div className="dash-table-wrap">
                 <table className="dash-table">
@@ -527,15 +617,16 @@ export default function AdminPanel() {
                       <th>Owner</th>
                       <th>Status</th>
                       <th>Uploaded</th>
+                      <th className="dash-th-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {docLoading ? (
-                      <tr><td colSpan={4} className="dash-empty">Loading documents…</td></tr>
+                      <tr><td colSpan={5} className="dash-empty">Loading documents…</td></tr>
                     ) : docError ? (
-                      <tr><td colSpan={4} className="dash-empty dash-empty--error">{docError}</td></tr>
+                      <tr><td colSpan={5} className="dash-empty dash-empty--error">{docError}</td></tr>
                     ) : docPageRows.length === 0 ? (
-                      <tr><td colSpan={4} className="dash-empty">No documents match your filters.</td></tr>
+                      <tr><td colSpan={5} className="dash-empty">No documents match your filters.</td></tr>
                     ) : docPageRows.map((doc) => {
                       const meta = STATUS_META[doc.status] ?? { label: doc.status, cls: '' };
                       return (
@@ -559,6 +650,30 @@ export default function AdminPanel() {
                           </td>
                           <td>
                             <span className="dash-uploaded">{formatDate(doc.uploaded_at)}</span>
+                          </td>
+                          <td className="dash-td-right">
+                            <div className="dash-actions">
+                              <button
+                                type="button"
+                                className="dash-actions-btn"
+                                aria-label="Document actions"
+                                onClick={() => setDocRowMenu((r) => (r === doc.id ? null : doc.id))}
+                              >
+                                <span className="material-symbols-outlined">more_vert</span>
+                              </button>
+                              {docRowMenu === doc.id && (
+                                <div className="dash-row-menu" role="menu">
+                                  <button type="button" className="dash-menu-item" onClick={() => handleView(doc)}>
+                                    <span className="material-symbols-outlined dash-menu-icon">visibility</span>
+                                    View
+                                  </button>
+                                  <button type="button" className="dash-menu-item" onClick={() => handleDownload(doc)}>
+                                    <span className="material-symbols-outlined dash-menu-icon">download</span>
+                                    Download
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -622,6 +737,8 @@ export default function AdminPanel() {
                 </div>
               </div>
 
+              {userActionError && <p className="dash-action-error">{userActionError}</p>}
+
               <div className="dash-table-wrap">
                 <table className="dash-table">
                   <thead>
@@ -629,8 +746,8 @@ export default function AdminPanel() {
                       <th>User</th>
                       <th>Role</th>
                       <th>Status</th>
-                      <th>Last Login</th>
                       <th>Joined</th>
+                      <th className="dash-th-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -658,10 +775,75 @@ export default function AdminPanel() {
                             <span className={`admin-badge ${statusMeta.cls}`}>{statusMeta.label}</span>
                           </td>
                           <td>
-                            <span className="dash-uploaded">{formatDate(u.last_login_at)}</span>
-                          </td>
-                          <td>
                             <span className="dash-uploaded">{formatDate(u.created_at)}</span>
+                          </td>
+                          <td className="dash-td-right">
+                            {u.id === currentUserId ? (
+                              <span className="admin-reviewed-by">You</span>
+                            ) : confirmDeleteId === u.id ? (
+                              <div className="admin-action-btns">
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--reject"
+                                  disabled={busyDelete}
+                                  onClick={() => handleDeleteUser(u.id)}
+                                >
+                                  {busyDelete
+                                    ? <span className="material-symbols-outlined">progress_activity</span>
+                                    : <><span className="material-symbols-outlined">delete</span>Confirm</>
+                                  }
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--approve"
+                                  disabled={busyDelete}
+                                  onClick={() => setConfirmDeleteId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : confirmMfaId === u.id ? (
+                              <div className="admin-action-btns">
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--action"
+                                  disabled={busyMfa}
+                                  onClick={() => handleResetMfa(u.id)}
+                                >
+                                  {busyMfa
+                                    ? <span className="material-symbols-outlined">progress_activity</span>
+                                    : <><span className="material-symbols-outlined">lock_reset</span>Confirm</>
+                                  }
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--approve"
+                                  disabled={busyMfa}
+                                  onClick={() => setConfirmMfaId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="admin-action-btns">
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--action"
+                                  onClick={() => { setUserActionError(''); setConfirmMfaId(u.id); }}
+                                >
+                                  <span className="material-symbols-outlined">lock_reset</span>
+                                  Reset MFA
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--reject"
+                                  onClick={() => { setUserActionError(''); setConfirmDeleteId(u.id); }}
+                                >
+                                  <span className="material-symbols-outlined">delete</span>
+                                  Remove
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );

@@ -101,7 +101,14 @@ export default function MFA() {
       return;
     }
 
-    navigate('/dashboard');
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    navigate(profile?.role === 'admin' ? '/admin' : '/dashboard');
   }
 
   function handleCodeInput(e) {

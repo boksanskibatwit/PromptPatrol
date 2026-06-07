@@ -203,3 +203,84 @@ async def reject_account(
     ).eq("id", request_id).execute()
 
     return {"detail": "Account rejected."}
+
+
+@router.post("/users/{user_id}/reset-mfa", status_code=status.HTTP_200_OK)
+async def reset_mfa(
+    user_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """Remove all MFA factors for a user and clear their mfa_secret. Requires admin JWT."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = authorization.split(" ", 1)[1].strip()
+    _assert_admin(token)
+
+    factors_url = f"{settings.supabase_url}/auth/v1/admin/users/{user_id}/factors"
+
+    async with httpx.AsyncClient() as client:
+        # Fetch all enrolled MFA factors.
+        list_resp = await client.get(factors_url, headers=AUTH_HEADERS)
+        if list_resp.status_code not in (200, 204):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to list MFA factors: {list_resp.text}",
+            )
+        factors = list_resp.json() if list_resp.content else []
+
+        # Delete each factor.
+        for factor in factors:
+            factor_id = factor.get("id")
+            if not factor_id:
+                continue
+            del_resp = await client.delete(
+                f"{factors_url}/{factor_id}",
+                headers=AUTH_HEADERS,
+            )
+            if del_resp.status_code not in (200, 204):
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Failed to delete MFA factor {factor_id}: {del_resp.text}",
+                )
+
+    # Clear the stored MFA secret in the public users table.
+    get_service_client().table("users").update({"mfa_secret": None}).eq("id", user_id).execute()
+
+    return {"detail": "MFA reset successfully."}
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_200_OK)
+async def delete_user(
+    user_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """Permanently delete a user. Requires admin JWT. Admins cannot delete themselves."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = authorization.split(" ", 1)[1].strip()
+    _assert_admin(token)
+
+    admin_id = _jwt_sub(token)
+    if admin_id == user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admins cannot delete themselves.")
+
+    svc = get_service_client()
+
+    # Delete public.users row first (cascades sessions and documents).
+    result = svc.table("users").delete().eq("id", user_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    # Delete from Supabase Auth so the account is fully removed.
+    async with httpx.AsyncClient() as client:
+        resp = await client.delete(
+            f"{SUPABASE_ADMIN_URL}/{user_id}",
+            headers=AUTH_HEADERS,
+        )
+    if resp.status_code not in (200, 204):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"User removed from app but auth deletion failed: {resp.text}",
+        )
+
+    return {"detail": "User deleted."}
