@@ -1,0 +1,58 @@
+--- PAGE 1 ---
+1000 <LOCATION>
+Kansas City MO <SSN>
+
+Jane Customer
+1234 Anywhere Dr.
+Small Town, MO 12345-6789
+
+
+                                                              Primary Account Number:    <ROUTING>
+Bank Statement
+If you have any questions about your statement,                   Statement Date:        June 5, 2003
+please call us at <UK_NHS>                               Page Number:                    1
+
+
+CONNECTIONS CHECKING  Account # <ROUTING>
+
+Account Summary Account # <ROUTING>
+
+
+Beginning Balance on May 3, 2003                                                               $7,126.11
+Deposits & Other Credits                                                                        +3,615.08
+ATM Withdrawals & Debits                                                                             -20.00
+VISA Check Card Purchases & Debits                                                                      -0.00
+Withdrawals & Other Debits                                                                                -0.00
+Checks Paid                                                                                      -200.00
+
+                      Ending Balance on June 5, 2003                                        $10,521.19
+
+Deposits & Other Credits Account # <ROUTING>
+
+Description                                                   Date Credited             Amount
+
+Deposit                        Ref Nbr:  <ROUTING>               05-15                    $3,615.08
+
+Total Deposits & Other Credits                                                                 $3,615.08
+
+ATM Withdrawals & Debits Account # <ROUTING>
+
+Description                                       Tran Date     Date Paid               Amount
+
+ATM Withdrawal
+1000 <LOCATION>   <US_DRIVER_LICENSE>
+<LOCATION> MO  <ROUTING>                            05-18         05-19                     $20.00
+
+
+Total ATM Withdrawals & Debits                                                                $20.00
+
+Checks Paid Account # <ROUTING>
+
+
+Date Paid    Check Number   Amount   Reference Number
+
+05-12       1001                75.00  <ROUTING>
+05-18       1002                30.00  <ROUTING>
+05-24       1003              200.00  <ROUTING>
+
+Total Checks Paid                                                                          $305.00
