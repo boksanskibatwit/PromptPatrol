@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { setPendingUpload } from '../lib/uploadHandoff';
-import { deleteObject, objectKeyFor, objectUrl } from '../lib/storage';
+import { getDownloadUrl, deleteDocument } from '../lib/api';
 import logo from './PromptPatrol.png';
 
 const PAGE_SIZE = 10;
@@ -158,21 +158,38 @@ export default function Dashboard() {
     navigate('/redact');
   }
 
-  // View/download go through top level navigation (no CORS needed); they
-  // require the GET method to be enabled on the API Gateway.
-  function handleView(doc) {
+  // View/download fetch a short-lived presigned S3 URL from the backend.
+  async function handleView(doc) {
     setRowMenu(null);
-    window.open(objectUrl(objectKeyFor(doc.id, doc.file_type)), '_blank', 'noopener');
+    setActionError('');
+    // Open the tab synchronously so popup blockers allow it, then point it
+    // at the presigned URL once the backend responds.
+    const tab = window.open('', '_blank', 'noopener');
+    try {
+      const url = await getDownloadUrl(doc.id);
+      if (tab) tab.location = url;
+      else window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      tab?.close();
+      setActionError(e.message);
+    }
   }
 
-  function handleDownload(doc) {
+  async function handleDownload(doc) {
     setRowMenu(null);
-    const a = document.createElement('a');
-    a.href = objectUrl(objectKeyFor(doc.id, doc.file_type));
-    a.download = doc.original_filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    setActionError('');
+    try {
+      // Content-Disposition on the presigned URL triggers the download and
+      // names the file after original_filename.
+      const url = await getDownloadUrl(doc.id, { attachment: true });
+      const a = document.createElement('a');
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      setActionError(e.message);
+    }
   }
 
   async function handleDelete(doc) {
@@ -183,13 +200,8 @@ export default function Dashboard() {
     }
     setBusyId(doc.id);
     try {
-      // Remove the S3 object first; the DB cascade handles redacted_documents.
-      await deleteObject(objectKeyFor(doc.id, doc.file_type));
-      const { error: delErr } = await supabase
-        .from('documents')
-        .delete()
-        .eq('id', doc.id);
-      if (delErr) throw new Error(delErr.message);
+      // Backend removes the S3 object, then the rows (cascade covers the rest).
+      await deleteDocument(doc.id);
       await reload();
     } catch (e) {
       setActionError(e.message);

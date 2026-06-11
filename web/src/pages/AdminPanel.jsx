@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { setPendingUpload } from '../lib/uploadHandoff';
-import { objectKeyFor, objectUrl } from '../lib/storage';
+import { getDownloadUrl } from '../lib/api';
 import logo from './PromptPatrol.png';
 
 const PAGE_SIZE = 10;
@@ -189,19 +189,35 @@ export default function AdminPanel() {
     navigate('/redact');
   }
 
-  function handleView(doc) {
+  // Presigned URLs come from the backend; admin RLS allows reading any
+  // user's document row, so the same endpoint serves the admin views.
+  async function handleView(doc) {
     setDocRowMenu(null);
-    window.open(objectUrl(objectKeyFor(doc.id, doc.file_type)), '_blank', 'noopener');
+    setDocError('');
+    const tab = window.open('', '_blank', 'noopener');
+    try {
+      const url = await getDownloadUrl(doc.id);
+      if (tab) tab.location = url;
+      else window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      tab?.close();
+      setDocError(e.message);
+    }
   }
 
-  function handleDownload(doc) {
+  async function handleDownload(doc) {
     setDocRowMenu(null);
-    const a = document.createElement('a');
-    a.href = objectUrl(objectKeyFor(doc.id, doc.file_type));
-    a.download = doc.original_filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    setDocError('');
+    try {
+      const url = await getDownloadUrl(doc.id, { attachment: true });
+      const a = document.createElement('a');
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      setDocError(e.message);
+    }
   }
 
   // ── Account request actions ──────────────────────────────────────────────

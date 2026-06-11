@@ -1,4 +1,7 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Annotated
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -7,7 +10,17 @@ class Settings(BaseSettings):
     # App
     environment: str = "development"
     log_level: str = "INFO"
-    allowed_origins: list[str] = ["http://localhost:5173"]
+    # NoDecode stops pydantic-settings from JSON-parsing the env value; the
+    # validator below accepts the comma-separated form documented in
+    # .env.example (e.g. "http://localhost:5173,https://app.example.com").
+    allowed_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, v):
+        if isinstance(v, str):
+            return [o.strip() for o in v.split(",") if o.strip()]
+        return v
 
     # Database
     database_url: str
