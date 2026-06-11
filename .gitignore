@@ -13,6 +13,10 @@ venv/
 node_modules/
 dist/
 
+# Lambda build artifacts
+backend/build/
+backend/lambda.zip
+
 # IDE
 .vscode/
 .idea/

@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RedactedDocsBucket",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::prompt-patrol-doc-storage/*"
+    },
+    {
+      "Sid": "ReadBackendSecrets",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParametersByPath", "ssm:GetParameters", "ssm:GetParameter"],
+      "Resource": "arn:aws:ssm:us-east-2:533266965830:parameter/promptpatrol/backend/*"
+    },
+    {
+      "Sid": "DecryptSecretsViaSsmOnly",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt"],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "kms:ViaService": "ssm.us-east-2.amazonaws.com" }
+      }
+    }
+  ]
+}

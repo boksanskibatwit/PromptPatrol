@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 from app.core.settings import settings
 from app.routers import admin, documents
@@ -16,3 +17,7 @@ app.add_middleware(
 
 app.include_router(admin.router)
 app.include_router(documents.router)
+
+# AWS Lambda entry point. Ignored when running locally under uvicorn; API
+# Gateway invokes this handler, which adapts the event to the ASGI `app`.
+handler = Mangum(app)

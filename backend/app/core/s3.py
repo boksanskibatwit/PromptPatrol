@@ -6,6 +6,7 @@ talks to the bucket (the old API Gateway proxy path is retired). Object keys
 follow the existing convention: "<documentId>.<ext>".
 """
 
+import os
 from functools import lru_cache
 
 import boto3
@@ -24,12 +25,17 @@ PRESIGNED_URL_TTL_SECONDS = 300
 
 @lru_cache
 def _client():
-    return boto3.client(
-        "s3",
-        region_name=settings.aws_region,
-        aws_access_key_id=settings.aws_access_key_id,
-        aws_secret_access_key=settings.aws_secret_access_key,
-    )
+    # Local dev: pass the explicit long-lived keys from backend/.env.
+    # On Lambda: the runtime injects the execution role's TEMPORARY credentials
+    # (access key + secret + *session token*) as env vars. Passing only the
+    # key+secret drops the session token and fails with InvalidAccessKeyId, so
+    # we let boto3's default credential chain assemble all three itself.
+    kwargs = {"region_name": settings.aws_region}
+    on_lambda = bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+    if not on_lambda and settings.aws_access_key_id and settings.aws_secret_access_key:
+        kwargs["aws_access_key_id"] = settings.aws_access_key_id
+        kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
+    return boto3.client("s3", **kwargs)
 
 
 def object_key(document_id: str, file_type: str) -> str:

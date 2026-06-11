@@ -194,11 +194,18 @@ export default function AdminPanel() {
   async function handleView(doc) {
     setDocRowMenu(null);
     setDocError('');
-    const tab = window.open('', '_blank', 'noopener');
+    // Open a blank tab synchronously, then navigate it once we have the URL.
+    // 'noopener' would make window.open return null and lose the reference, so
+    // we omit it and sever the opener link manually instead.
+    const tab = window.open('about:blank', '_blank');
     try {
       const url = await getDownloadUrl(doc.id);
-      if (tab) tab.location = url;
-      else window.open(url, '_blank', 'noopener');
+      if (tab) {
+        tab.opener = null;
+        tab.location = url;
+      } else {
+        window.location.assign(url);
+      }
     } catch (e) {
       tab?.close();
       setDocError(e.message);

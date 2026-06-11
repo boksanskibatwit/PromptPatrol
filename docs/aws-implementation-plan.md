@@ -34,7 +34,7 @@ Supabase (Postgres + Auth) stays exactly as is — the diagram already treats it
 
 ---
 
-## Phase 1 — Backend document routes with a redaction stub (no new AWS)
+## Phase 1 — Backend document routes with a redaction stub (no new AWS) — ✅ DONE
 
 > The real redaction engine (`backend/app/ml/redact_text.py`) is **incomplete and
 > owned by other team members** — do not wire it in yet. This phase builds the
@@ -68,7 +68,23 @@ Supabase (Postgres + Auth) stays exactly as is — the diagram already treats it
 **Exit criteria:** upload → candidates served by the backend → file stored via the
 backend; API Gateway S3 proxy no longer called by the browser.
 
-## Phase 2 — Deploy the backend (Lambda + API Gateway)
+## Phase 2 — Deploy the backend (Lambda + API Gateway) — ✅ DONE
+
+> **Deployed 2026-06-11.** Function `promptpatrol-backend` (python3.13, 512 MB,
+> x86_64) behind HTTP API `30zev1yw8g`, region us-east-2. Public endpoint:
+> `https://30zev1yw8g.execute-api.us-east-2.amazonaws.com`. Secrets in SSM under
+> `/promptpatrol/backend/`; runs as scoped role `promptpatrol-backend-lambda`.
+> Deploy steps + commands live in `backend/deploy/README.md`; build via
+> `backend/build_lambda.sh`. Full upload → redact → view → download → delete flow
+> verified against the deployed backend.
+>
+> **Two gotchas hit (worth a line in the report):**
+> 1. *Lambda role credentials are temporary* — they include a **session token**,
+>    so `s3.py` must let boto3's default chain assemble them, not pass just
+>    key+secret (that fails with `InvalidAccessKeyId`).
+> 2. *API Gateway `create-api --target` does not add the Lambda invoke
+>    permission* — it must be granted explicitly with `lambda add-permission`
+>    using the real `ApiId`.
 
 1. Add `mangum` to `backend/requirements.txt` and a `handler = Mangum(app)` line
    in `app/main.py` — FastAPI runs on Lambda unchanged.

@@ -15,4 +15,5 @@ pydantic-settings==2.14.1  # loads the .env file into the typed settings object
 pyotp==2.9.0               # generates/verifies TOTP codes for Google Authenticator MFA
 python-multipart==0.0.30   # lets FastAPI receive uploaded document files
 httpx==0.28.1              # async HTTP client for Supabase Admin API calls (ban/unban)
-boto3==1.40.0              # AWS SDK — S3 put/delete/presign for redacted documents
+boto3==1.40.0              # AWS SDK — S3 put/delete/presign for redacted documents; SSM secrets on Lambda
+mangum==0.19.0             # ASGI adapter so the FastAPI app runs as an AWS Lambda function

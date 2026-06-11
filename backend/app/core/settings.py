@@ -3,6 +3,8 @@ from typing import Annotated
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from app.core.secrets import load_ssm_parameters_into_env
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -36,9 +38,12 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
 
     # AWS / S3
+    # Region is auto-provided by Lambda (the reserved AWS_REGION env var) and by
+    # backend/.env locally. Access keys are used ONLY for local dev — on Lambda
+    # they're absent and boto3 falls back to the function's execution role.
     aws_region: str = "us-east-1"
-    aws_access_key_id: str
-    aws_secret_access_key: str
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
     s3_bucket_redacted: str = "promptpatrol-redacted"
     s3_bucket_audit: str = "promptpatrol-audit"
 
@@ -47,4 +52,7 @@ class Settings(BaseSettings):
     ml_service_secret: str
 
 
+# On Lambda this pulls secrets from SSM into the environment first; locally it's
+# a no-op and Settings reads backend/.env as before.
+load_ssm_parameters_into_env()
 settings = Settings()  # type: ignore[call-arg]

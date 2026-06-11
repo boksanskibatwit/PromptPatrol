@@ -162,13 +162,19 @@ export default function Dashboard() {
   async function handleView(doc) {
     setRowMenu(null);
     setActionError('');
-    // Open the tab synchronously so popup blockers allow it, then point it
-    // at the presigned URL once the backend responds.
-    const tab = window.open('', '_blank', 'noopener');
+    // Open a blank tab synchronously (inside the click gesture) so the popup
+    // blocker allows it, then navigate it once we have the URL. Note: we can't
+    // pass 'noopener' here — it makes window.open return null, losing the tab
+    // reference we need. We sever the opener link manually instead.
+    const tab = window.open('about:blank', '_blank');
     try {
       const url = await getDownloadUrl(doc.id);
-      if (tab) tab.location = url;
-      else window.open(url, '_blank', 'noopener');
+      if (tab) {
+        tab.opener = null;
+        tab.location = url;
+      } else {
+        window.location.assign(url); // popup blocked — fall back to this tab
+      }
     } catch (e) {
       tab?.close();
       setActionError(e.message);
