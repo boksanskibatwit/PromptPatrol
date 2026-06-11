@@ -105,7 +105,20 @@ after base64). Cap uploads at ~5 MB client-side and document it; course document
 fit comfortably. (The alternative — presigned-URL uploads of originals to S3 —
 would violate the "originals are never persisted" principle.)
 
-## Phase 3 — Frontend hosting (S3 + CloudFront)
+## Phase 3 — Frontend hosting (S3 + CloudFront) — ✅ DONE
+
+> **Deployed 2026-06-11.** Live at `https://dv0rezuo5ctw7.cloudfront.net`.
+> Private bucket `promptpatrol-frontend` (us-east-2, Block Public Access ON),
+> served only via CloudFront distribution `E3L5CANT2P5KQ5` using Origin Access
+> Control. Default root `index.html`; custom error responses 403 **and** 404 →
+> `/index.html` (200) for SPA routing under `BrowserRouter`. Redeploy with
+> `web/deploy_frontend.sh` (build → `s3 sync --delete` → CloudFront
+> invalidation). Lambda `ALLOWED_ORIGINS` now includes the CloudFront origin;
+> the CloudFront URL was added to Supabase Auth Site URL + redirect allowlist.
+>
+> **Gotcha hit:** CORS origins are matched **exactly, including scheme** — the
+> `ALLOWED_ORIGINS` entry must be `https://dv0rezuo5ctw7.cloudfront.net`, not the
+> bare host. A missing `https://` silently blocks every API call.
 
 1. Private bucket `promptpatrol-frontend` + CloudFront distribution with Origin
    Access Control; default root `index.html`, 403/404 → `/index.html` (SPA routing).
