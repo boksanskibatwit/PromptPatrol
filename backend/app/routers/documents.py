@@ -16,6 +16,7 @@ DELETE /documents/{id}             -> removes the S3 object and the DB rows
 
 import hashlib
 import json
+import logging
 from datetime import datetime, timezone
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -27,8 +28,20 @@ from app.db.supabase import get_service_client, _client_for_token
 from app.ml import engine
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTS = {"pdf", "docx", "txt", "rtf"}
+PERSISTABLE_ENTITY_TYPES = {
+    "person_name",
+    "company_name",
+    "location",
+    "date_of_birth",
+    "ssn",
+    "account_number",
+    "credit_card",
+    "routing_number",
+    "date",
+}
 
 
 # ── auth helpers ─────────────────────────────────────────────────────────────
@@ -71,7 +84,10 @@ async def analyze_document(
     _authenticated_user(_bearer_token(authorization))
     ext = _validated_ext(file.filename or "")
     data = await file.read()
-    pages = engine.analyze(data, ext)
+    try:
+        pages = engine.analyze(data, ext)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     return {"pages": [p.model_dump() for p in pages]}
 
 
@@ -97,7 +113,10 @@ async def redact_document(
 
     data = await file.read()
     accepted = [c for c in decisions if c.decision == "confirmed"]
-    redacted = engine.apply(data, ext, accepted)
+    try:
+        redacted = engine.apply(data, ext, accepted)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     now = datetime.now(timezone.utc).isoformat()
 
     # 1. Metadata row as the caller, so RLS owner checks apply.
@@ -130,6 +149,7 @@ async def redact_document(
     try:
         s3.put_redacted(key, redacted, ext)
     except (BotoCoreError, ClientError) as exc:
+        logger.exception("S3 upload failed for document %s", doc["id"])
         _rollback_doc()
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"S3 upload failed: {exc}")
 
@@ -146,7 +166,10 @@ async def redact_document(
                 "written_to_s3_at": now,
             }
         ).execute()
-        if decisions:
+        persisted_decisions = [
+            c for c in decisions if c.entity in PERSISTABLE_ENTITY_TYPES
+        ]
+        if persisted_decisions:
             svc.table("redaction_candidates").insert(
                 [
                     {
@@ -161,10 +184,11 @@ async def redact_document(
                         "review_status": c.decision,
                         "reviewed_at": now,
                     }
-                    for c in decisions
+                    for c in persisted_decisions
                 ]
             ).execute()
     except Exception as exc:
+        logger.exception("Failed to record redaction rows for document %s", doc["id"])
         try:
             s3.delete_redacted(key)
         except (BotoCoreError, ClientError):

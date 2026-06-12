@@ -1666,6 +1666,27 @@ body {
   min-height: 480px;
 }
 
+.redact-preview-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  line-height: 28px;
+  color: var(--charcoal);
+}
+
+.redact-preview-mask {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--charcoal);
+  color: var(--paper-bright);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 22px;
+}
+
 .redact-preview-line {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 16px;

@@ -29,7 +29,7 @@ Deposits & Other Credits Account # <account_number>
 
 Description                                                   Date Credited             Amount
 
-Deposit                        Ref Nbr:  130012345               05-15                    $3,615.08
+Deposit                        Ref Nbr:  130012345               <date>                    $3,615.08
 
 Total Deposits & Other Credits                                                                 $3,615.08
 
@@ -38,7 +38,7 @@ ATM Withdrawals & Debits Account # <account_number>
 Description                                       Tran Date     Date Paid               Amount
 
 ATM Withdrawal
-<location>  00005678                            05-18         05-19                     $20.00
+<location>  00005678                            <date>                     $20.00
 
 
 Total ATM Withdrawals & Debits                                                                $20.00
@@ -48,8 +48,8 @@ Checks Paid Account # <account_number>
 
 Date Paid    Check Number   Amount   Reference Number
 
-05-12       1001                75.00  00012576589
-05-18       1002                30.00  00036547854
-05-24       1003              200.00  00094613547
+<date>       1001                75.00  00012576589
+<date>       1002                30.00  00036547854
+<date>       1003              200.00  00094613547
 
 Total Checks Paid                                                                          $305.00

@@ -201,7 +201,6 @@ export default function AdminPanel() {
     try {
       const url = await getDownloadUrl(doc.id);
       if (tab) {
-        tab.opener = null;
         tab.location = url;
       } else {
         window.location.assign(url);

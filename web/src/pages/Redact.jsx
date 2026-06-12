@@ -18,7 +18,39 @@ const ENTITY_LABEL = {
   credit_card: 'Credit_Card',
   routing_number: 'Routing_Number',
   date: 'Date',
+  email: 'Email',
+  phone_number: 'Phone_Number',
 };
+
+function renderPreview(page, decisions) {
+  const pageText = page.text || page.preview.join('\n');
+  const baseOffset = page.start_offset ?? 0;
+  const confirmed = page.candidates
+    .filter((c) => decisions[c.id] === 'confirmed')
+    .map((c) => ({
+      ...c,
+      localStart: Math.max(0, c.start_offset - baseOffset),
+      localEnd: Math.max(0, c.end_offset - baseOffset),
+    }))
+    .filter((c) => c.localEnd > c.localStart)
+    .sort((a, b) => a.localStart - b.localStart);
+
+  const parts = [];
+  let cursor = 0;
+  confirmed.forEach((c) => {
+    if (c.localStart < cursor) return;
+    if (c.localStart > cursor) {
+      parts.push({ type: 'text', value: pageText.slice(cursor, c.localStart) });
+    }
+    parts.push({ type: 'redacted', value: ENTITY_LABEL[c.entity] ?? c.entity, id: c.id });
+    cursor = c.localEnd;
+  });
+  if (cursor < pageText.length) {
+    parts.push({ type: 'text', value: pageText.slice(cursor) });
+  }
+
+  return parts.length ? parts : [{ type: 'text', value: 'No readable text was found on this page.' }];
+}
 
 export default function Redact() {
   const navigate = useNavigate();
@@ -81,6 +113,7 @@ export default function Redact() {
   const confirmedCount = Object.values(decisions).filter(
     (d) => d === 'confirmed'
   ).length;
+  const previewParts = page ? renderPreview(page, decisions) : [];
 
   function setDecision(id, value) {
     setDecisions((d) => ({ ...d, [id]: value }));
@@ -183,11 +216,17 @@ export default function Redact() {
             <section className="redact-preview">
               <h2 className="redact-col-title">Preview</h2>
               <div className="redact-preview-body">
-                {page.preview.map((line, i) => (
-                  <p key={i} className="redact-preview-line">
-                    {line}
-                  </p>
-                ))}
+                <pre className="redact-preview-text">
+                  {previewParts.map((part, i) =>
+                    part.type === 'redacted' ? (
+                      <mark key={`${part.id}-${i}`} className="redact-preview-mask">
+                        {part.value}
+                      </mark>
+                    ) : (
+                      <span key={i}>{part.value}</span>
+                    )
+                  )}
+                </pre>
               </div>
             </section>
 
@@ -196,8 +235,7 @@ export default function Redact() {
               <h2 className="redact-col-title">Candidates (page {pageIdx + 1})</h2>
               <p className="redact-candidates-note">
                 {confirmedCount} of {allCandidates.length} items marked for
-                redaction across all pages. (Placeholder findings until the
-                detection pipeline is connected.)
+                redaction across all pages.
               </p>
 
               {page.candidates.length === 0 ? (
