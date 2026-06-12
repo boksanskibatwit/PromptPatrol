@@ -1,23 +1,43 @@
-[REDACTED_ORG]
+<PERSON> met with <PERSON> on <DOB> to finalize onboarding at Fidelity Investments.
 
-Customer Name: [REDACTED_PERSON]
-Date of Birth: 03/15/1988
-[REDACTED_ORG]: [REDACTED_SSN]
+His SSN is <SSN> and must be protected.
 
-Address:
-15 Main Street
-Boston, [REDACTED_ORG] Number:
-[REDACTED_PHONE]
+Backup SSNs:
+- <SSN>
+- <SSN>
+- <SSN>
+- <SSN>
 
-Email:
-[REDACTED_EMAIL]
+Contact information:
+Email primary: <EMAIL>
+Email secondary: <EMAIL>
+Email backup: <EMAIL>
 
-Employer:
-[REDACTED_ORG]
+Phone numbers:
+Primary: <PHONE>
+Secondary: <PHONE>
+International-style (noise): <PHONE>
 
-Credit Card:
-[REDACTED_CREDIT_CARD]
+Credit cards:
+Visa: <CREDIT_CARD>
+MasterCard: <CREDIT_CARD>
+Amex: <CREDIT_CARD>
+Invalid card noise: 1234 5678 9012 3456
 
-Summary:
+Banking info:
+Routing number: <PHONE>
+Random 9-digit noise: <ROUTING>
+Long number noise: <ROUTING>
 
-[REDACTED_PERSON] met with representatives from [REDACTED_ORG] on [REDACTED_DATE] to discuss account activity. He currently resides in [REDACTED_GPE] and requested additional information regarding his investment portfolio.
+Personal details:
+<PERSON> (DOB <DOB>) lives at 15 <LOCATION>, <LOCATION>, <LOCATION>.
+<PERSON> (DOB <DOB>) previously worked at Google and Microsoft Research.
+
+Mixed sentence:
+<PERSON> emailed <EMAIL> while using SSN <SSN> and card <CREDIT_CARD>.
+
+Edge cases:
+SSN embedded: 123-45-6789x123
+Broken SSN: 123-45-678
+Weird formatting: SSN:<SSN>
+Extra noise text: call me at <PHONE> tomorrow
