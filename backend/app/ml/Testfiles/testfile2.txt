@@ -1,0 +1,50 @@
+PromptPatrol redaction fixture - allowed entity coverage
+
+Applicant summary:
+Maria Elena Carter submitted the application for review on 06/12/2026.
+Date of Birth: 04/18/1987
+SSN: 321-54-9876
+Email: maria.carter+loan@example-bank.com
+Home address: 742 Evergreen Terrace, Springfield, IL
+
+Employer and business details:
+Current employer: Northstar Lending Group
+Previous employer: Acme Financial Group
+Office location: 125 Summer Street, Boston, MA
+Verification contact: payroll@northstarlending.com
+Phone: 617-555-1234
+Mobile: (857) 555-9876
+Support line: +1 212 555 0199
+
+Banking details:
+Account Number: 427498-234824
+Acct: 8392014478
+Routing Number: 011000015
+ABA: 021000021
+
+Payment details:
+Credit card on file: 4242424242424242
+Backup Visa: 4111111111111111
+Backup Amex: 378282246310005
+Invalid card noise: 1234567890123456
+
+Additional dated events:
+Signed date: 05/14/2026
+Renewal date: 11/03/2026
+Meeting date: 01/09/2025
+
+Second applicant:
+David Nguyen lives at 88 Pine Road, Seattle, WA.
+DOB 09/07/1992
+SSN: 987-65-4321
+Email: d.nguyen@personalmail.org
+Phone: 206.555.0147
+Account Number: 55102 99881
+Routing number: 026009593
+Card: 5555555555554444
+
+Noise that should not become supported labels:
+IP address: 192.168.1.25
+Random nine digits without routing context: 123456789
+Broken SSN: 123-45-678
+Plain organization-like text without context: neighborhood book club

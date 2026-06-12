@@ -1,0 +1,50 @@
+PromptPatrol redaction fixture - allowed entity coverage
+
+Applicant summary:
+<person_name> submitted the application for review on <date>.
+Date of Birth: <date_of_birth>
+SSN: <ssn>
+Email: <email>
+Home address: <location>
+
+Employer and business details:
+Current employer: <company_name>
+Previous employer: <company_name>
+Office location: <location>
+Verification contact: <email>
+Phone: <phone_number>
+Mobile: <phone_number>
+Support line: <phone_number>
+
+Banking details:
+Account Number: <account_number>
+Acct: <account_number>
+Routing Number: <routing_number>
+ABA: <routing_number>
+
+Payment details:
+Credit card on file: <credit_card>
+Backup Visa: <credit_card>
+Backup Amex: <credit_card>
+Invalid card noise: 1234567890123456
+
+Additional dated events:
+Signed date: <date>
+Renewal date: <date>
+Meeting date: <date>
+
+Second applicant:
+<person_name> lives at <location>.
+DOB <date_of_birth>
+SSN: <ssn>
+Email: <email>
+Phone: <phone_number>
+Account Number: <account_number>
+Routing number: <routing_number>
+Card: <credit_card>
+
+Noise that should not become supported labels:
+IP address: 192.168.1.25
+Random nine digits without routing context: 123456789
+Broken SSN: 123-45-678
+Plain organization-like text without context: neighborhood book club

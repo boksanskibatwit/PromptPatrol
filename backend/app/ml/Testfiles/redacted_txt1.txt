@@ -1,0 +1,43 @@
+<person_name> met with <person_name> on <date> to finalize onboarding at <company_name>.
+
+His SSN is <ssn> and must be protected.
+
+Backup SSNs:
+- <ssn>
+- <ssn>
+- <ssn>
+- <ssn>
+
+Contact information:
+Email primary: <email>
+Email secondary: <email>
+Email backup: <email>
+
+Phone numbers:
+Primary: <phone_number>
+Secondary: <phone_number>
+Alternate formatted phone: <phone_number>
+
+Credit cards:
+Visa: <credit_card>
+MasterCard: <credit_card>
+Amex: <credit_card>
+Invalid card noise: 1234 5678 9012 3456
+
+Banking info:
+Routing number: <routing_number>
+Random 9-digit noise: 123456789
+Long number noise: 1234567890123
+
+Personal details:
+<person_name> (DOB <date_of_birth>) lives at <location>.
+<person_name> (DOB <date_of_birth>) previously worked at <company_name> and <company_name>.
+
+Mixed sentence:
+<person_name> emailed <email> while using SSN <ssn> and card <credit_card>.
+
+Edge cases:
+SSN embedded: 123-45-6789x123
+Broken SSN: 123-45-678
+Weird formatting: SSN:<ssn>
+Phone without separators: call me at <phone_number> tomorrow

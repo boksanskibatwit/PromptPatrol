@@ -18,21 +18,29 @@ analyzer = AnalyzerEngine()
 anonymizer = AnonymizerEngine()
 
 # =========================
-# ENTITY MAP (normalize everything early)
+# ENTITY MAP (normalize to app entity_type_t values)
 # =========================
 ENTITY_MAP = {
-    "PERSON": "PERSON",
-    "EMAIL_ADDRESS": "EMAIL",
-    "PHONE_NUMBER": "PHONE",
-    "CREDIT_CARD": "CREDIT_CARD",
-    "SSN": "SSN",
-    "US_SSN": "SSN",
-    "DATE_OF_BIRTH": "DOB",
-    "DATE_TIME": "DATE",
-    "LOCATION": "LOCATION",
-    "ORGANIZATION": "ORG",
-    "US_BANK_NUMBER": "ROUTING"
+    "PERSON": "person_name",
+    "ORGANIZATION": "company_name",
+    "LOCATION": "location",
+    "DATE_OF_BIRTH": "date_of_birth",
+    "SSN": "ssn",
+    "US_SSN": "ssn",
+    "EMAIL_ADDRESS": "email",
+    "PHONE_NUMBER": "phone_number",
+    "CREDIT_CARD": "credit_card",
+    "US_BANK_NUMBER": "routing_number",
+    "US_ACCOUNT_NUMBER": "account_number",
+    "DATE_TIME": "date",
 }
+
+ALLOWED_ENTITY_TYPES = set(ENTITY_MAP.values())
+PRESIDIO_ENTITY_TYPES = tuple(
+    entity_type
+    for entity_type in ENTITY_MAP
+    if entity_type not in {"US_BANK_NUMBER", "US_ACCOUNT_NUMBER", "US_SSN"}
+)
 
 # =========================
 # LUHN CHECK (credit card validation)
@@ -58,7 +66,7 @@ def luhn_check(number: str) -> bool:
 ssn_recognizer = PatternRecognizer(
     supported_entity="SSN",
     patterns=[
-        Pattern("ssn", r"\b\d{3}-\d{2}-\d{4}\b", 0.95)
+        Pattern("ssn", r"(?<![A-Za-z0-9])\d{3}-\d{2}-\d{4}(?![A-Za-z0-9])", 0.95)
     ],
 )
 analyzer.registry.add_recognizer(ssn_recognizer)
@@ -81,27 +89,14 @@ analyzer.registry.add_recognizer(cc_recognizer)
 
 
 # =========================
-# PHONE (strict format)
-# =========================
-phone_recognizer = PatternRecognizer(
-    supported_entity="PHONE_NUMBER",
-    patterns=[
-        Pattern("phone", r"\b\d{3}-\d{3}-\d{4}\b", 0.9)
-    ],
-)
-analyzer.registry.add_recognizer(phone_recognizer)
-
-
-# =========================
 # ROUTING NUMBER
 # =========================
-routing_recognizer = PatternRecognizer(
-    supported_entity="US_BANK_NUMBER",
-    patterns=[
-        Pattern("routing", r"\b\d{9}\b", 0.6)
-    ],
-)
-analyzer.registry.add_recognizer(routing_recognizer)
+# Routing numbers are added by a context-aware regex pass below. Presidio's
+# generic 9-digit recognizer is too noisy for bank statements and fixtures.
+
+
+# Account numbers are also added by a regex pass so the detected span is only
+# the sensitive value, not the "Account Number:" label.
 
 
 # =========================
@@ -110,16 +105,181 @@ analyzer.registry.add_recognizer(routing_recognizer)
 DOB_REGEX = re.compile(
     r"(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12]\d|3[01])[/-](?:19|20)\d{2}"
 )
+MONTH_DATE_REGEX = re.compile(
+    r"\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+    r"Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|"
+    r"Dec(?:ember)?)\s+\d{1,2},\s+(?:19|20)\d{2}\b",
+    re.IGNORECASE,
+)
+SHORT_MONTH_DAY_REGEX = re.compile(
+    r"(?<![\d-])(?:0?[1-9]|1[0-2])-(?:0?[1-9]|[12]\d|3[01])(?![\d-])"
+)
+EMAIL_REGEX = re.compile(
+    r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+    re.IGNORECASE,
+)
+PHONE_REGEX = re.compile(
+    r"(?<!\d)(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)"
+)
+ACCOUNT_REGEX = re.compile(
+    r"\b(?:account(?:\s+number)?|acct\.?|a/c)\s*#?\s*[:\-]?\s*(\d[\d\s-]{4,}\d)\b",
+    re.IGNORECASE,
+)
+ROUTING_REGEX = re.compile(
+    r"\b(?:routing(?:\s+number)?|aba)\s*#?\s*[:\-]?\s*(\d{9})\b",
+    re.IGNORECASE,
+)
+COMPANY_REGEX = re.compile(
+    r"\b(?:employer|company|organization|business|client|vendor)\s*[:\-]\s*"
+    r"([A-Z][A-Za-z0-9&.,'-]*(?:[ \t]+[A-Z][A-Za-z0-9&.,'-]*){1,5})\b"
+)
+COMPANY_SUFFIX_REGEX = re.compile(
+    r"\b[A-Z][A-Za-z0-9&.'-]*(?:[ \t]+[A-Z][A-Za-z0-9&.'-]*){0,4}"
+    r"[ \t]+(?:Bank|Capital|Company|Corp|Corporation|Credit Union|Financial|Group|Holdings|"
+    r"Insurance|Investments|Labs|LLC|Ltd|Partners|Research|Technologies|University)\b"
+)
+COMPANY_CONTEXT_REGEX = re.compile(
+    r"\b(?:at|for|from|employed by|worked at|previously worked at)\s+"
+    r"([A-Z][A-Za-z0-9&.'-]*(?:[ \t]+(?:and[ \t]+)?[A-Z][A-Za-z0-9&.'-]*){0,5})\b"
+)
+ADDRESS_REGEX = re.compile(
+    r"\b\d{1,6}\s+[A-Z][A-Za-z0-9.'-]*(?:\s+[A-Z][A-Za-z0-9.'-]*){1,5},\s*"
+    r"[A-Z][A-Za-z.'-]*(?:\s+[A-Z][A-Za-z.'-]*)?,\s*[A-Z]{2}\b"
+)
+MULTILINE_ADDRESS_REGEX = re.compile(
+    r"\b\d{1,6}\s+[A-Z][A-Za-z0-9.'-]*(?:[ \t]+[A-Z][A-Za-z0-9.'-]*){0,5}\.?"
+    r"\s*\n\s*[A-Z][A-Za-z.'-]*(?:[ \t]+[A-Z][A-Za-z.'-]*)?,?\s+[A-Z]{2}"
+    r"(?:\s+\d{5}(?:-\d{4})?)?\b"
+)
+NAME_BEFORE_ADDRESS_REGEX = re.compile(
+    r"\n\s*([A-Z][a-z]+(?:[ \t]+[A-Z]\.)?[ \t]+[A-Z][a-z]+)\s*\n"
+    r"\s*\d{1,6}\s+[A-Z]"
+)
+
+
+def result_from_match(entity_type, match, score=0.9, group=0):
+    return RecognizerResult(
+        entity_type=entity_type,
+        start=match.start(group),
+        end=match.end(group),
+        score=score,
+    )
+
+
+def has_birth_context(text, start, end):
+    window = text[max(0, start - 35):min(len(text), end + 10)].lower()
+    return (
+        "date of birth" in window
+        or "dob" in window
+        or "birth date" in window
+    )
 
 def find_dobs(text):
     return [
-        RecognizerResult(
-            entity_type="DATE_OF_BIRTH",
-            start=m.start(),
-            end=m.end(),
-            score=0.9
-        )
+        result_from_match("DATE_OF_BIRTH", m, 1.0)
         for m in DOB_REGEX.finditer(text)
+        if has_birth_context(text, m.start(), m.end())
+    ]
+
+
+def find_dates(text):
+    dates = [
+        result_from_match("DATE_TIME", m, 0.8)
+        for m in DOB_REGEX.finditer(text)
+        if not has_birth_context(text, m.start(), m.end())
+    ]
+    dates.extend(
+        result_from_match("DATE_TIME", m, 0.82)
+        for m in MONTH_DATE_REGEX.finditer(text)
+        if not has_birth_context(text, m.start(), m.end())
+    )
+    dates.extend(
+        result_from_match("DATE_TIME", m, 0.78)
+        for m in SHORT_MONTH_DAY_REGEX.finditer(text)
+    )
+    return dates
+
+
+def find_emails(text):
+    return [
+        result_from_match("EMAIL_ADDRESS", m, 0.95)
+        for m in EMAIL_REGEX.finditer(text)
+    ]
+
+
+def find_phone_numbers(text):
+    return [
+        result_from_match("PHONE_NUMBER", m, 0.9)
+        for m in PHONE_REGEX.finditer(text)
+    ]
+
+
+def find_account_numbers(text):
+    return [
+        result_from_match("US_ACCOUNT_NUMBER", m, 0.94, group=1)
+        for m in ACCOUNT_REGEX.finditer(text)
+    ]
+
+
+def find_routing_numbers(text):
+    return [
+        result_from_match("US_BANK_NUMBER", m, 0.9, group=1)
+        for m in ROUTING_REGEX.finditer(text)
+    ]
+
+
+def find_companies(text):
+    companies = [
+        result_from_match("ORGANIZATION", m, 0.85, group=1)
+        for m in COMPANY_REGEX.finditer(text)
+    ]
+    companies.extend(
+        result_from_match("ORGANIZATION", m, 0.82)
+        for m in COMPANY_SUFFIX_REGEX.finditer(text)
+    )
+
+    for m in COMPANY_CONTEXT_REGEX.finditer(text):
+        value_start = m.start(1)
+        value = m.group(1).rstrip(".,")
+        parts = re.finditer(
+            r"[A-Z][A-Za-z0-9&.'-]*(?:[ \t]+[A-Z][A-Za-z0-9&.'-]*)*",
+            value.replace(" and ", "\n"),
+        )
+        search_offset = 0
+        for part in parts:
+            name = part.group(0)
+            original_start = text.find(name, value_start + search_offset)
+            if original_start == -1:
+                continue
+            search_offset = original_start - value_start + len(name)
+            companies.append(
+                RecognizerResult(
+                    entity_type="ORGANIZATION",
+                    start=original_start,
+                    end=original_start + len(name),
+                    score=0.78,
+                )
+            )
+
+    return companies
+
+
+def find_addresses(text):
+    addresses = [
+        result_from_match("LOCATION", m, 0.98)
+        for m in ADDRESS_REGEX.finditer(text)
+    ]
+    addresses.extend(
+        result_from_match("LOCATION", m, 0.98)
+        for m in MULTILINE_ADDRESS_REGEX.finditer(text)
+    )
+    return addresses
+
+
+def find_names_before_addresses(text):
+    return [
+        result_from_match("PERSON", m, 0.86, group=1)
+        for m in NAME_BEFORE_ADDRESS_REGEX.finditer(text)
     ]
 
 
@@ -129,12 +289,14 @@ def find_dobs(text):
 
 def is_valid_date_span(text, start, end):
     span = text[start:end]
-    return len(span) <= 10 and not re.search(r"\d{4,}", span)
-
-
-def is_phone_span(text, start, end):
-    span = text[start:end]
-    return bool(re.fullmatch(r"\d{3}-\d{3}-\d{4}", span))
+    return bool(
+        re.fullmatch(
+            r"(?:0?[1-9]|1[0-2])[/-](?:0?[1-9]|[12]\d|3[01])[/-](?:19|20)\d{2}",
+            span,
+        )
+        or MONTH_DATE_REGEX.fullmatch(span)
+        or SHORT_MONTH_DAY_REGEX.fullmatch(span)
+    )
 
 
 def is_routing_context(text, start, end):
@@ -284,20 +446,42 @@ def read_pdf_text(
 # OVERLAP RESOLVER
 # =========================
 def resolve_overlaps(results):
+    entity_priority = {
+        "DATE_OF_BIRTH": 0,
+        "LOCATION": 1,
+        "ORGANIZATION": 2,
+        "EMAIL_ADDRESS": 3,
+        "US_ACCOUNT_NUMBER": 4,
+        "PHONE_NUMBER": 5,
+        "US_BANK_NUMBER": 6,
+        "CREDIT_CARD": 7,
+        "SSN": 8,
+        "US_SSN": 8,
+        "PERSON": 9,
+        "DATE_TIME": 10,
+    }
+
     results = sorted(
         results,
-        key=lambda x: (x.start, -(x.end - x.start), -x.score)
+        key=lambda x: (
+            -x.score,
+            entity_priority.get(x.entity_type, 99),
+            -(x.end - x.start),
+            x.start,
+        )
     )
 
     filtered = []
-    last_end = -1
 
     for r in results:
-        if r.start >= last_end:
+        overlaps_existing = any(
+            r.start < existing.end and existing.start < r.end
+            for existing in filtered
+        )
+        if not overlaps_existing:
             filtered.append(r)
-            last_end = r.end
 
-    return filtered
+    return sorted(filtered, key=lambda x: x.start)
 
 
 # =========================
@@ -353,13 +537,20 @@ def read_document_text(input_file: str | Path) -> str:
 # =========================
 def redact(text: str):
 
-    results = analyzer.analyze(text=text, language="en")
+    results = analyzer.analyze(
+        text=text,
+        language="en",
+        entities=PRESIDIO_ENTITY_TYPES,
+    )
     results.extend(find_dobs(text))
-
-    # normalize entities
-    for r in results:
-        r.entity_type = ENTITY_MAP.get(r.entity_type, r.entity_type)
-        
+    results.extend(find_dates(text))
+    results.extend(find_emails(text))
+    results.extend(find_phone_numbers(text))
+    results.extend(find_account_numbers(text))
+    results.extend(find_routing_numbers(text))
+    results.extend(find_companies(text))
+    results.extend(find_addresses(text))
+    results.extend(find_names_before_addresses(text))
 
     # validate credit cards (Luhn)
     results = filter_credit_cards(text, results)
@@ -377,19 +568,20 @@ def redact(text: str):
     results = [
         r for r in results
         if not (
-            r.entity_type in ["DATE", "DATE_OF_BIRTH"]
+            r.entity_type in ["DATE_TIME", "DATE_OF_BIRTH"]
             and not is_valid_date_span(text, r.start, r.end)
         )
     ]
 
-    # ensure phone correctness
-    results = [
-        r for r in results
-        if not (
-            r.entity_type == "PHONE_NUMBER"
-            and not is_phone_span(text, r.start, r.end)
-        )
-    ]
+    # Normalize to the app enum values used by Redact.jsx / Supabase, and
+    # discard Presidio entities outside the supported redaction label set.
+    normalized_results = []
+    for r in results:
+        mapped_entity = ENTITY_MAP.get(r.entity_type)
+        if mapped_entity in ALLOWED_ENTITY_TYPES:
+            r.entity_type = mapped_entity
+            normalized_results.append(r)
+    results = normalized_results
 
     # final cleanup
     results = resolve_overlaps(results)
@@ -480,4 +672,6 @@ def run(
 # ENTRY
 # =========================
 if __name__ == "__main__":
-    run("testpdf1.pdf", "redacted_output1.txt")
+    run("Testfiles/testfile.txt", "Testfiles/redacted_txt1.txt")
+    run("Testfiles/testfile2.txt", "Testfiles/redacted_txt2.txt")   
+    run("Testfiles/testpdf1.pdf", "Testfiles/redacted_txt3.txt")

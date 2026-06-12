@@ -16,7 +16,7 @@ Email backup: test.user+finance@domain.co
 Phone numbers:
 Primary: 617-555-1234
 Secondary: 857-555-9876
-International-style (noise): 021-000-0210
+Alternate formatted phone: 021-000-0210
 
 Credit cards:
 Visa: 4111 1111 1111 1111
@@ -40,4 +40,4 @@ Edge cases:
 SSN embedded: 123-45-6789x123
 Broken SSN: 123-45-678
 Weird formatting: SSN:123-45-6789
-Extra noise text: call me at 6175551234 tomorrow
+Phone without separators: call me at 6175551234 tomorrow
