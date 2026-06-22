@@ -15,3 +15,13 @@ pydantic-settings==2.14.1  # loads the .env file into the typed settings object
 pyotp==2.9.0               # generates/verifies TOTP codes for Google Authenticator MFA
 python-multipart==0.0.30   # lets FastAPI receive uploaded document files
 httpx==0.28.1              # async HTTP client for Supabase Admin API calls (ban/unban)
+boto3==1.40.0              # AWS SDK — S3 put/delete/presign for redacted documents; SSM secrets on Lambda
+mangum==0.19.0             # ASGI adapter so the FastAPI app runs as an AWS Lambda function
+presidio-analyzer==2.2.359 # PII detection engine used by app/ml/redact_psudo.py
+presidio-anonymizer==2.2.359 # PII replacement engine used by app/ml/redact_psudo.py
+spacy==3.8.14              # NLP runtime required by presidio-analyzer
+click==8.3.1               # spaCy imports click during startup via its CLI utilities
+easyocr==1.7.2             # OCR fallback for scanned PDFs in app/ml/redact_psudo.py
+PyMuPDF==1.27.2.3          # PDF text/image extraction for redaction preprocessing
+numpy==2.4.6               # Image array conversion for EasyOCR
+Pillow==12.2.0             # PDF page image handling for OCR

@@ -4,6 +4,17 @@ This document covers the analyst-facing web flow added on top of the existing
 auth pages: the **dashboard**, the **upload → redaction review → S3 storage**
 pipeline, and the supporting storage/RLS layer.
 
+> **Update (Phase 1, June 2026):** the flow now runs through the FastAPI
+> backend (`backend/app/routers/documents.py`). The browser sends the file to
+> `POST /documents/analyze` (findings) and `POST /documents/redact` (S3 write +
+> all DB rows, service-role); View/Download use backend-issued presigned URLs
+> and Delete goes through `DELETE /documents/{id}`. `web/src/lib/storage.js`
+> and the direct API Gateway → S3 path are **retired** (lock down that gateway
+> — it allows unauthenticated PUT/DELETE). Migration `15` reverts migration
+> `09`'s client-write policies — run it. The redaction engine itself is still a
+> stub (`backend/app/ml/engine.py`) until the ML pipeline lands; sections below
+> describing client-side S3 access are historical.
+
 > Status: the redaction **algorithm is not yet wired in**. The redaction review
 > screen shows placeholder findings and stores the file as-is. Everything else
 > (auth gating, S3 round-trip, DB metadata, dashboard actions) is real.

@@ -249,6 +249,52 @@ async def reset_mfa(
     return {"detail": "MFA reset successfully."}
 
 
+@router.post("/users/{user_id}/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(
+    user_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """Generate a password reset link and email it to the user. Requires admin JWT."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = authorization.split(" ", 1)[1].strip()
+    _assert_admin(token)
+
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            f"{SUPABASE_ADMIN_URL}/{user_id}",
+            headers=AUTH_HEADERS,
+        )
+        if user_resp.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to fetch user: {user_resp.text}",
+            )
+        user_email = user_resp.json().get("email")
+        if not user_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no email address.",
+            )
+
+    async with httpx.AsyncClient() as client:
+        link_resp = await client.post(
+            f"{settings.supabase_url}/auth/v1/admin/generate_link",
+            headers=AUTH_HEADERS,
+            json={
+                "type": "recovery",
+                "email": user_email,
+            },
+        )
+        if link_resp.status_code not in (200, 201):
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to generate reset link: {link_resp.text}",
+            )
+
+    return {"detail": "Password reset email sent."}
+
+
 @router.delete("/users/{user_id}", status_code=status.HTTP_200_OK)
 async def delete_user(
     user_id: str,

@@ -1,0 +1,55 @@
+--- PAGE 1 ---
+<location>
+
+<person_name>
+<location>
+
+
+                                                              Primary Account Number:    <account_number>
+Bank Statement
+If you have any questions about your statement,                   Statement Date:        <date>
+please call us at <phone_number>                               Page Number:                    1
+
+
+CONNECTIONS CHECKING  Account # <account_number>
+
+Account Summary Account # <account_number>
+
+
+Beginning Balance on <date>                                                               $7,126.11
+Deposits & Other Credits                                                                        +3,615.08
+ATM Withdrawals & Debits                                                                             -20.00
+VISA Check Card Purchases & Debits                                                                      -0.00
+Withdrawals & Other Debits                                                                                -0.00
+Checks Paid                                                                                      -200.00
+
+                      Ending Balance on <date>                                        $10,521.19
+
+Deposits & Other Credits Account # <account_number>
+
+Description                                                   Date Credited             Amount
+
+Deposit                        Ref Nbr:  130012345               <date>                    $3,615.08
+
+Total Deposits & Other Credits                                                                 $3,615.08
+
+ATM Withdrawals & Debits Account # <account_number>
+
+Description                                       Tran Date     Date Paid               Amount
+
+ATM Withdrawal
+<location>  00005678                            <date>                     $20.00
+
+
+Total ATM Withdrawals & Debits                                                                $20.00
+
+Checks Paid Account # <account_number>
+
+
+Date Paid    Check Number   Amount   Reference Number
+
+<date>       1001                75.00  00012576589
+<date>       1002                30.00  00036547854
+<date>       1003              200.00  00094613547
+
+Total Checks Paid                                                                          $305.00

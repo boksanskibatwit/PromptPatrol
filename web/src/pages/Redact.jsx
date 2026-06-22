@@ -1,14 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { peekPendingUpload, clearPendingUpload } from '../lib/uploadHandoff';
-import {
-  BUCKET_NAME,
-  deleteObject,
-  extensionOf,
-  objectKeyFor,
-  putObject,
-} from '../lib/storage';
+import { analyzeDocument, redactDocument, extensionOf } from '../lib/api';
 import logo from './PromptPatrol.png';
 
 // file_type_t enum — only these can be stored.
@@ -25,74 +18,39 @@ const ENTITY_LABEL = {
   credit_card: 'Credit_Card',
   routing_number: 'Routing_Number',
   date: 'Date',
+  email: 'Email',
+  phone_number: 'Phone_Number',
 };
 
-/*
- * Placeholder document pages + candidates until the spaCy/regex pipeline is
- * connected. Page 1 mirrors the wireframe; pages 2-4 are filler so Prev/Next
- * can be demonstrated.
- */
-const MOCK_PAGES = [
-  {
-    preview: [
-      'Loan Application reviewed for applicant',
-      'Collin J. Lane, residing at',
-      '550 Huntington Ave, Boston, MA',
-      'Date of Birth:        11/22/2003',
-      'SSN: *** **** 2022',
-      'Annual Reported Income: $100,000,000',
-      'Account Number: 427498 - 234824',
-    ],
-    candidates: [
-      { id: 'p1-1', entity: 'person_name', text: 'Collin J. Lane' },
-      { id: 'p1-2', entity: 'location', text: '550 Huntington Ave' },
-      { id: 'p1-3', entity: 'date_of_birth', text: '11/22/2003' },
-      { id: 'p1-4', entity: 'ssn', text: '**** **** 2022' },
-      { id: 'p1-5', entity: 'account_number', text: '427498 - 234824' },
-    ],
-  },
-  {
-    preview: [
-      'Co-applicant details',
-      'Jane A. Doe, residing at',
-      '12 Beacon Street, Boston, MA',
-      'Date of Birth:        04/02/1999',
-      'SSN: *** **** 8841',
-    ],
-    candidates: [
-      { id: 'p2-1', entity: 'person_name', text: 'Jane A. Doe' },
-      { id: 'p2-2', entity: 'location', text: '12 Beacon Street' },
-      { id: 'p2-3', entity: 'date_of_birth', text: '04/02/1999' },
-      { id: 'p2-4', entity: 'ssn', text: '**** **** 8841' },
-    ],
-  },
-  {
-    preview: [
-      'Employment verification',
-      'Employer: Acme Financial Group',
-      'Contact: hr@acmefinancial.com',
-      'Routing Number: 011000015',
-    ],
-    candidates: [
-      { id: 'p3-1', entity: 'company_name', text: 'Acme Financial Group' },
-      { id: 'p3-2', entity: 'routing_number', text: '011000015' },
-    ],
-  },
-  {
-    preview: [
-      'Signatures',
-      'Signed on 05/14/2026 by Collin J. Lane',
-      'Card on file: 4242 4242 4242 4242',
-    ],
-    candidates: [
-      { id: 'p4-1', entity: 'date', text: '05/14/2026' },
-      { id: 'p4-2', entity: 'person_name', text: 'Collin J. Lane' },
-      { id: 'p4-3', entity: 'credit_card', text: '4242 4242 4242 4242' },
-    ],
-  },
-];
+function renderPreview(page, decisions) {
+  const pageText = page.text || page.preview.join('\n');
+  const baseOffset = page.start_offset ?? 0;
+  const confirmed = page.candidates
+    .filter((c) => decisions[c.id] === 'confirmed')
+    .map((c) => ({
+      ...c,
+      localStart: Math.max(0, c.start_offset - baseOffset),
+      localEnd: Math.max(0, c.end_offset - baseOffset),
+    }))
+    .filter((c) => c.localEnd > c.localStart)
+    .sort((a, b) => a.localStart - b.localStart);
 
-const ALL_CANDIDATES = MOCK_PAGES.flatMap((p) => p.candidates);
+  const parts = [];
+  let cursor = 0;
+  confirmed.forEach((c) => {
+    if (c.localStart < cursor) return;
+    if (c.localStart > cursor) {
+      parts.push({ type: 'text', value: pageText.slice(cursor, c.localStart) });
+    }
+    parts.push({ type: 'redacted', value: ENTITY_LABEL[c.entity] ?? c.entity, id: c.id });
+    cursor = c.localEnd;
+  });
+  if (cursor < pageText.length) {
+    parts.push({ type: 'text', value: pageText.slice(cursor) });
+  }
+
+  return parts.length ? parts : [{ type: 'text', value: 'No readable text was found on this page.' }];
+}
 
 export default function Redact() {
   const navigate = useNavigate();
@@ -103,10 +61,9 @@ export default function Redact() {
 
   // scanning -> review -> storing
   const [phase, setPhase] = useState('scanning');
+  const [pages, setPages] = useState(null);
   const [pageIdx, setPageIdx] = useState(0);
-  const [decisions, setDecisions] = useState(() =>
-    Object.fromEntries(ALL_CANDIDATES.map((c) => [c.id, 'confirmed']))
-  );
+  const [decisions, setDecisions] = useState({});
   const [error, setError] = useState('');
 
   // No file means the user hit /redact directly — send them back. Otherwise
@@ -119,22 +76,44 @@ export default function Redact() {
     clearPendingUpload();
   }, [file, navigate]);
 
-  // Simulate the redaction scan.
+  // Run the backend detection engine on the in-memory file.
   useEffect(() => {
     if (!file) return undefined;
-    const t = setTimeout(() => setPhase('review'), 1400);
-    return () => clearTimeout(t);
+    let active = true;
+    (async () => {
+      try {
+        const { pages: result } = await analyzeDocument(file);
+        if (!active) return;
+        setPages(result);
+        setDecisions(
+          Object.fromEntries(
+            result.flatMap((p) => p.candidates).map((c) => [c.id, 'confirmed'])
+          )
+        );
+        setPhase('review');
+      } catch (e) {
+        if (!active) return;
+        setError(e.message);
+        setPages([]);
+        setPhase('review');
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [file]);
 
   if (!file) return null;
 
   const ext = extensionOf(file.name);
   const supported = SUPPORTED_EXTS.includes(ext);
-  const page = MOCK_PAGES[pageIdx];
-  const totalPages = MOCK_PAGES.length;
+  const allCandidates = (pages ?? []).flatMap((p) => p.candidates);
+  const page = pages?.[pageIdx];
+  const totalPages = pages?.length ?? 0;
   const confirmedCount = Object.values(decisions).filter(
     (d) => d === 'confirmed'
   ).length;
+  const previewParts = page ? renderPreview(page, decisions) : [];
 
   function setDecision(id, value) {
     setDecisions((d) => ({ ...d, [id]: value }));
@@ -150,66 +129,18 @@ export default function Redact() {
 
     setPhase('storing');
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/login');
-      return;
-    }
-
-    // 1. Document metadata row (owner-scoped by RLS).
-    const { data: doc, error: docErr } = await supabase
-      .from('documents')
-      .insert({
-        owner_id: session.user.id,
-        original_filename: file.name,
-        file_type: ext,
-        size_bytes: file.size,
-        status: 'stored',
-        completed_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (docErr) {
-      setError(docErr.message);
-      setPhase('review');
-      return;
-    }
-
-    // 2. Upload the redacted artifact to S3.
-    //    (Mock: the algorithm isn't wired up yet, so we store the file as-is.)
-    const key = objectKeyFor(doc.id, ext);
+    // The backend applies the redactions, stores ONLY the redacted artifact
+    // in S3, and records documents / redacted_documents / candidate rows.
     try {
-      await putObject(key, file, file.type || 'application/octet-stream');
+      await redactDocument(
+        file,
+        allCandidates.map((c) => ({
+          ...c,
+          decision: decisions[c.id] === 'confirmed' ? 'confirmed' : 'rejected',
+        }))
+      );
     } catch (e) {
-      // Roll back the orphaned metadata row so the dashboard stays consistent.
-      await supabase.from('documents').delete().eq('id', doc.id);
       setError(e.message);
-      setPhase('review');
-      return;
-    }
-
-    // 3. Record the S3 location.
-    const { error: redErr } = await supabase.from('redacted_documents').insert({
-      source_document_id: doc.id,
-      s3_bucket: BUCKET_NAME,
-      s3_object_key: key,
-      file_type: ext,
-      size_bytes: file.size,
-      written_to_s3_at: new Date().toISOString(),
-    });
-
-    if (redErr) {
-      // The file is in S3 but we couldn't record it — clean both up.
-      try {
-        await deleteObject(key);
-      } catch {
-        /* best effort */
-      }
-      await supabase.from('documents').delete().eq('id', doc.id);
-      setError(redErr.message);
       setPhase('review');
       return;
     }
@@ -228,7 +159,7 @@ export default function Redact() {
           <div>
             <div className="redact-bar-file">{file.name}</div>
             <div className="redact-bar-page">
-              page {pageIdx + 1} of {totalPages}
+              page {totalPages === 0 ? 0 : pageIdx + 1} of {totalPages}
             </div>
           </div>
         </div>
@@ -253,7 +184,7 @@ export default function Redact() {
           <button
             type="button"
             className="redact-apply-btn"
-            disabled={storing || phase === 'scanning'}
+            disabled={storing || phase === 'scanning' || !page}
             onClick={handleApply}
           >
             {storing ? 'Storing…' : 'Apply Redactions →'}
@@ -268,16 +199,34 @@ export default function Redact() {
       ) : (
         <main className="redact-review">
           {error && <p className="redact-error">{error}</p>}
+          {!page ? (
+            <p className="redact-status">
+              This document could not be analyzed.{' '}
+              <button
+                type="button"
+                className="redact-nav-btn"
+                onClick={() => navigate('/dashboard')}
+              >
+                Back to dashboard
+              </button>
+            </p>
+          ) : (
           <div className="redact-grid">
             {/* Left: document preview */}
             <section className="redact-preview">
               <h2 className="redact-col-title">Preview</h2>
               <div className="redact-preview-body">
-                {page.preview.map((line, i) => (
-                  <p key={i} className="redact-preview-line">
-                    {line}
-                  </p>
-                ))}
+                <pre className="redact-preview-text">
+                  {previewParts.map((part, i) =>
+                    part.type === 'redacted' ? (
+                      <mark key={`${part.id}-${i}`} className="redact-preview-mask">
+                        {part.value}
+                      </mark>
+                    ) : (
+                      <span key={i}>{part.value}</span>
+                    )
+                  )}
+                </pre>
               </div>
             </section>
 
@@ -285,9 +234,8 @@ export default function Redact() {
             <section className="redact-candidates">
               <h2 className="redact-col-title">Candidates (page {pageIdx + 1})</h2>
               <p className="redact-candidates-note">
-                {confirmedCount} of {ALL_CANDIDATES.length} items marked for
-                redaction across all pages. (Placeholder findings until the
-                detection pipeline is connected.)
+                {confirmedCount} of {allCandidates.length} items marked for
+                redaction across all pages.
               </p>
 
               {page.candidates.length === 0 ? (
@@ -340,6 +288,7 @@ export default function Redact() {
               )}
             </section>
           </div>
+          )}
         </main>
       )}
     </div>

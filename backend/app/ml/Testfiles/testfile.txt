@@ -1,0 +1,43 @@
+John Smith met with Sarah Johnson on 03/14/1998 to finalize onboarding at Fidelity Investments.
+
+His SSN is 123-45-6789 and must be protected.
+
+Backup SSNs:
+- 000-12-3456
+- 666-12-3456
+- 999-12-3456
+- 000-00-0000
+
+Contact information:
+Email primary: john.smith@example.com
+Email secondary: john.smith99@work-mail.org
+Email backup: test.user+finance@domain.co
+
+Phone numbers:
+Primary: 617-555-1234
+Secondary: 857-555-9876
+Alternate formatted phone: 021-000-0210
+
+Credit cards:
+Visa: 4111 1111 1111 1111
+MasterCard: 5500-0000-0000-0004
+Amex: 378282246310005
+Invalid card noise: 1234 5678 9012 3456
+
+Banking info:
+Routing number: 021000021
+Random 9-digit noise: 123456789
+Long number noise: 1234567890123
+
+Personal details:
+Sarah Johnson (DOB 07/22/1995) lives at 15 Beacon Street, Boston, MA.
+John Smith (DOB 03/14/1998) previously worked at Google and Microsoft Research.
+
+Mixed sentence:
+Sarah Johnson emailed sarah.j@gmail.com while using SSN 999-12-3456 and card 378282246310005.
+
+Edge cases:
+SSN embedded: 123-45-6789x123
+Broken SSN: 123-45-678
+Weird formatting: SSN:123-45-6789
+Phone without separators: call me at 6175551234 tomorrow
