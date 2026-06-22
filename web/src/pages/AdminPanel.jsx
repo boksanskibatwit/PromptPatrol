@@ -85,6 +85,9 @@ export default function AdminPanel() {
   const [busyDelete, setBusyDelete] = useState(false);
   const [confirmMfaId, setConfirmMfaId] = useState(null);
   const [busyMfa, setBusyMfa] = useState(false);
+  const [confirmPwResetId, setConfirmPwResetId] = useState(null);
+  const [busyPwReset, setBusyPwReset] = useState(false);
+  const [userRowMenu, setUserRowMenu] = useState(null);
   const [userActionError, setUserActionError] = useState('');
 
   // Documents state
@@ -164,7 +167,10 @@ export default function AdminPanel() {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
-      if (!e.target.closest?.('.dash-actions')) setDocRowMenu(null);
+      if (!e.target.closest?.('.dash-actions')) {
+        setDocRowMenu(null);
+        setUserRowMenu(null);
+      }
     }
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -279,6 +285,30 @@ export default function AdminPanel() {
       setUserActionError(e.message);
     } finally {
       setBusyMfa(false);
+    }
+  }
+
+  async function handleResetPassword(userId) {
+    setUserActionError('');
+    setBusyPwReset(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/users/${userId}/reset-password`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        },
+      );
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail ?? 'Failed to reset password.');
+      }
+      setConfirmPwResetId(null);
+    } catch (e) {
+      setUserActionError(e.message);
+    } finally {
+      setBusyPwReset(false);
     }
   }
 
@@ -766,9 +796,9 @@ export default function AdminPanel() {
                   <thead>
                     <tr>
                       <th>User</th>
-                      <th>Role</th>
-                      <th>Status</th>
-                      <th>Joined</th>
+                      <th className="dash-th-center">Role</th>
+                      <th className="dash-th-center">Status</th>
+                      <th className="dash-th-center">Joined</th>
                       <th className="dash-th-right">Actions</th>
                     </tr>
                   </thead>
@@ -790,13 +820,13 @@ export default function AdminPanel() {
                               <span className="admin-applicant-email">{u.email || '—'}</span>
                             </div>
                           </td>
-                          <td>
+                          <td className="dash-td-center">
                             <span className={`admin-badge ${roleMeta.cls}`}>{roleMeta.label}</span>
                           </td>
-                          <td>
+                          <td className="dash-td-center">
                             <span className={`admin-badge ${statusMeta.cls}`}>{statusMeta.label}</span>
                           </td>
-                          <td>
+                          <td className="dash-td-center">
                             <span className="dash-uploaded">{formatDate(u.created_at)}</span>
                           </td>
                           <td className="dash-td-right">
@@ -824,6 +854,28 @@ export default function AdminPanel() {
                                   Cancel
                                 </button>
                               </div>
+                            ) : confirmPwResetId === u.id ? (
+                              <div className="admin-action-btns">
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--action"
+                                  disabled={busyPwReset}
+                                  onClick={() => handleResetPassword(u.id)}
+                                >
+                                  {busyPwReset
+                                    ? <span className="material-symbols-outlined">progress_activity</span>
+                                    : <><span className="material-symbols-outlined">password</span>Confirm</>
+                                  }
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--approve"
+                                  disabled={busyPwReset}
+                                  onClick={() => setConfirmPwResetId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             ) : confirmMfaId === u.id ? (
                               <div className="admin-action-btns">
                                 <button
@@ -847,23 +899,41 @@ export default function AdminPanel() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="admin-action-btns">
+                              <div className="dash-actions">
                                 <button
                                   type="button"
-                                  className="admin-btn admin-btn--action"
-                                  onClick={() => { setUserActionError(''); setConfirmMfaId(u.id); }}
+                                  className="dash-actions-btn"
+                                  aria-label="User actions"
+                                  onClick={() => setUserRowMenu((r) => (r === u.id ? null : u.id))}
                                 >
-                                  <span className="material-symbols-outlined">lock_reset</span>
-                                  Reset MFA
+                                  <span className="material-symbols-outlined">more_vert</span>
                                 </button>
-                                <button
-                                  type="button"
-                                  className="admin-btn admin-btn--reject"
-                                  onClick={() => { setUserActionError(''); setConfirmDeleteId(u.id); }}
-                                >
-                                  <span className="material-symbols-outlined">delete</span>
-                                  Remove
-                                </button>
+                                {userRowMenu === u.id && (
+                                  <div className="dash-row-menu" role="menu">
+                                    <button
+                                      type="button"
+                                      className="dash-menu-item"
+                                      onClick={() => { setUserRowMenu(null); setUserActionError(''); setConfirmPwResetId(u.id); }}
+                                    >
+                                      Reset Password
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="dash-menu-item"
+                                      onClick={() => { setUserRowMenu(null); setUserActionError(''); setConfirmMfaId(u.id); }}
+                                    >
+                                      Reset MFA
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="dash-menu-item"
+                                      onClick={() => { setUserRowMenu(null); setUserActionError(''); setConfirmDeleteId(u.id); }}
+                                    >
+                                      <span className="material-symbols-outlined dash-menu-icon">delete</span>
+                                      Remove
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </td>
@@ -903,12 +973,6 @@ export default function AdminPanel() {
             <span className="dash-footer-brand">PromptPatrol</span>
             <p className="dash-footer-copy">© 2026 PromptPatrol — Senior Project. All rights reserved.</p>
           </div>
-          <nav className="dash-footer-nav">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Security Disclosure</a>
-            <a href="#">Support</a>
-          </nav>
         </div>
       </footer>
     </div>

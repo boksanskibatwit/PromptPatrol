@@ -509,12 +509,6 @@ export default function Dashboard() {
               © 2026 PromptPatrol — Senior Project. All rights reserved.
             </p>
           </div>
-          <nav className="dash-footer-nav">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Security Disclosure</a>
-            <a href="#">Support</a>
-          </nav>
         </div>
       </footer>
     </div>

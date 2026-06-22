@@ -10,8 +10,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # App
-    environment: str = "development"
-    log_level: str = "INFO"
     # NoDecode stops pydantic-settings from JSON-parsing the env value; the
     # validator below accepts the comma-separated form documented in
     # .env.example (e.g. "http://localhost:5173,https://app.example.com").
@@ -21,21 +19,14 @@ class Settings(BaseSettings):
     @classmethod
     def _split_origins(cls, v):
         if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
+            v = v.strip().removeprefix("[").removesuffix("]")
+            return [o.strip().strip('"').strip("'") for o in v.split(",") if o.strip()]
         return v
-
-    # Database
-    database_url: str
 
     # Supabase
     supabase_url: str
     supabase_anon_key: str
     supabase_service_role_key: str
-
-    # JWT
-    jwt_secret: str
-    jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60
 
     # AWS / S3
     # Region is auto-provided by Lambda (the reserved AWS_REGION env var) and by
@@ -45,11 +36,6 @@ class Settings(BaseSettings):
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
     s3_bucket_redacted: str = "promptpatrol-redacted"
-    s3_bucket_audit: str = "promptpatrol-audit"
-
-    # ML service (internal)
-    ml_service_url: str = "http://ml-service:8001"
-    ml_service_secret: str
 
 
 # On Lambda this pulls secrets from SSM into the environment first; locally it's
