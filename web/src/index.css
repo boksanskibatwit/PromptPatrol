@@ -1881,14 +1881,6 @@ body {
   border-radius: 8px;
 }
 
-.redact-cand-check {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--charcoal);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 .redact-cand-info {
   display: flex;
   flex-direction: column;
@@ -1913,48 +1905,44 @@ body {
   white-space: nowrap;
 }
 
-.redact-cand-actions {
-  display: flex;
-  gap: 8px;
+.redact-switch {
   flex-shrink: 0;
-}
-
-.redact-yes,
-.redact-no {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 32px;
-  border: 1px solid var(--outline-var);
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.15s;
 }
 
-.redact-yes .material-symbols-outlined,
-.redact-no .material-symbols-outlined {
-  font-size: 20px;
-  color: var(--on-surface-var);
-}
-
-.redact-yes--on {
-  background: #1f9d55;
-  border-color: #1f9d55;
-}
-
-.redact-yes--on .material-symbols-outlined {
-  color: #fff;
-}
-
-.redact-no--on {
+.redact-switch-track {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
   background: var(--error);
-  border-color: var(--error);
+  transition: background 0.18s ease;
 }
 
-.redact-no--on .material-symbols-outlined {
-  color: #fff;
+.redact-switch--on .redact-switch-track {
+  background: #1f9d55;
+}
+
+.redact-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.18s ease;
+}
+
+.redact-switch--on .redact-switch-thumb {
+  transform: translateX(20px);
 }
 
 /* ===================================================
