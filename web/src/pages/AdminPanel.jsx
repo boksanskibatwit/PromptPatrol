@@ -37,6 +37,18 @@ const USER_STATUS_META = {
   suspended: { label: 'Suspended', cls: 'admin-badge--rejected' },
 };
 
+const USER_ROLE_OPTIONS   = [['user', 'User'], ['admin', 'Admin']];
+const USER_STATUS_OPTIONS = [['active', 'Active'], ['suspended', 'Suspended']];
+
+// Sort keys offered in the Filters panel. Each can be toggled on/off and
+// flipped between directions; multiple may be active and apply in priority
+// order (top to bottom of `sortCriteria`).
+const USER_SORT_OPTIONS = [
+  { key: 'name',   label: 'Name',      asc: 'A → Z',          desc: 'Z → A',          defaultDir: 'asc'  },
+  { key: 'docs',   label: 'Documents', asc: 'Fewest first',   desc: 'Most first',     defaultDir: 'desc' },
+  { key: 'joined', label: 'Joined',    asc: 'Oldest first',   desc: 'Newest first',   defaultDir: 'desc' },
+];
+
 function formatDate(iso) {
   if (!iso) return '—';
   const then = new Date(iso);
@@ -79,7 +91,11 @@ export default function AdminPanel() {
   const [userLoading, setUserLoading] = useState(true);
   const [userError, setUserError] = useState('');
   const [userSearch, setUserSearch] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [filterRoles, setFilterRoles] = useState([]);          // [] = all roles
+  const [filterStatuses, setFilterStatuses] = useState([]);    // [] = all statuses
+  const [sortCriteria, setSortCriteria] = useState([{ key: 'name', dir: 'asc' }]);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterMenuRef = useRef(null);
   const [userPage, setUserPage] = useState(1);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [busyDelete, setBusyDelete] = useState(false);
@@ -89,6 +105,7 @@ export default function AdminPanel() {
   const [busyPwReset, setBusyPwReset] = useState(false);
   const [userRowMenu, setUserRowMenu] = useState(null);
   const [userActionError, setUserActionError] = useState('');
+  const [docsModalUser, setDocsModalUser] = useState(null);
 
   // Documents state
   const [documents, setDocuments] = useState([]);
@@ -167,6 +184,9 @@ export default function AdminPanel() {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
+      if (filterMenuRef.current && !filterMenuRef.current.contains(e.target)) {
+        setFilterMenuOpen(false);
+      }
       if (!e.target.closest?.('.dash-actions')) {
         setDocRowMenu(null);
         setUserRowMenu(null);
@@ -175,6 +195,13 @@ export default function AdminPanel() {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
+
+  useEffect(() => {
+    if (!docsModalUser) return;
+    function onKey(e) { if (e.key === 'Escape') setDocsModalUser(null); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [docsModalUser]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -373,23 +400,78 @@ export default function AdminPanel() {
 
   useEffect(() => { setDocPage(1); }, [docSearch, docStatusFilter]);
 
+  const docCountByOwner = useMemo(() => {
+    const counts = {};
+    for (const d of documents) {
+      if (d.owner_id) counts[d.owner_id] = (counts[d.owner_id] ?? 0) + 1;
+    }
+    return counts;
+  }, [documents]);
+
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
-    return users.filter((u) => {
-      const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+    const rows = users.filter((u) => {
+      const matchesRole = filterRoles.length === 0 || filterRoles.includes(u.role);
+      const matchesStatus = filterStatuses.length === 0 || filterStatuses.includes(u.status);
       const matchesSearch = !q ||
         u.email?.toLowerCase().includes(q) ||
         u.username?.toLowerCase().includes(q);
-      return matchesRole && matchesSearch;
+      return matchesRole && matchesStatus && matchesSearch;
     });
-  }, [users, userSearch, userRoleFilter]);
+
+    // Per-key comparator (ascending); direction is applied per criterion below.
+    const compareBy = {
+      name:   (a, b) => (a.username || a.email || '')
+        .localeCompare(b.username || b.email || '', undefined, { sensitivity: 'base' }),
+      docs:   (a, b) => (docCountByOwner[a.id] ?? 0) - (docCountByOwner[b.id] ?? 0),
+      joined: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    };
+
+    const criteria = sortCriteria.length ? sortCriteria : [{ key: 'name', dir: 'asc' }];
+    // Name always has the lowest priority: it only breaks ties left by the
+    // other active sorts (e.g. Documents trumps Name when both are on).
+    const ordered = [...criteria].sort((a, b) => (a.key === 'name' ? 1 : 0) - (b.key === 'name' ? 1 : 0));
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      for (const { key, dir } of ordered) {
+        const cmp = compareBy[key]?.(a, b) ?? 0;
+        if (cmp !== 0) return dir === 'desc' ? -cmp : cmp;
+      }
+      return 0;
+    });
+    return sorted;
+  }, [users, userSearch, filterRoles, filterStatuses, sortCriteria, docCountByOwner]);
 
   const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const userCurrentPage = Math.min(userPage, userPageCount);
   const userStart = (userCurrentPage - 1) * PAGE_SIZE;
   const userPageRows = filteredUsers.slice(userStart, userStart + PAGE_SIZE);
 
-  useEffect(() => { setUserPage(1); }, [userSearch, userRoleFilter]);
+  useEffect(() => { setUserPage(1); }, [userSearch, filterRoles, filterStatuses, sortCriteria]);
+
+  // ── Filters panel helpers ────────────────────────────────────────────────
+  const toggleInArray = (setter) => (value) =>
+    setter((prev) => prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]);
+  const toggleRole = toggleInArray(setFilterRoles);
+  const toggleStatus = toggleInArray(setFilterStatuses);
+
+  function toggleSort(key, defaultDir) {
+    setSortCriteria((prev) => prev.some((s) => s.key === key)
+      ? prev.filter((s) => s.key !== key)
+      : [...prev, { key, dir: defaultDir }]);
+  }
+  function flipSortDir(key) {
+    setSortCriteria((prev) =>
+      prev.map((s) => s.key === key ? { ...s, dir: s.dir === 'asc' ? 'desc' : 'asc' } : s));
+  }
+  function resetFilters() {
+    setFilterRoles([]);
+    setFilterStatuses([]);
+    setSortCriteria([{ key: 'name', dir: 'asc' }]);
+  }
+
+  const activeFilterCount = filterRoles.length + filterStatuses.length +
+    sortCriteria.filter((s) => !(s.key === 'name' && s.dir === 'asc')).length;
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
 
@@ -769,17 +851,89 @@ export default function AdminPanel() {
                   />
                 </div>
 
-                <div className="dash-select-wrap">
-                  <select
-                    className="dash-select"
-                    value={userRoleFilter}
-                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                <div className="dash-filter-wrap" ref={filterMenuRef}>
+                  <button
+                    type="button"
+                    className={`dash-filter-btn ${activeFilterCount > 0 ? 'dash-filter-btn--active' : ''}`}
+                    aria-haspopup="true"
+                    aria-expanded={filterMenuOpen}
+                    onClick={() => setFilterMenuOpen((o) => !o)}
                   >
-                    <option value="all">All Roles</option>
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <span className="material-symbols-outlined dash-select-icon">expand_more</span>
+                    <span className="material-symbols-outlined">tune</span>
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <span className="dash-filter-badge">{activeFilterCount}</span>
+                    )}
+                  </button>
+
+                  {filterMenuOpen && (
+                    <div className="dash-filter-panel" role="menu">
+                      <div className="dash-filter-section">
+                        <div className="dash-filter-heading">Role</div>
+                        {USER_ROLE_OPTIONS.map(([val, label]) => (
+                          <label key={val} className="dash-filter-check">
+                            <input
+                              type="checkbox"
+                              checked={filterRoles.includes(val)}
+                              onChange={() => toggleRole(val)}
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="dash-filter-section">
+                        <div className="dash-filter-heading">Status</div>
+                        {USER_STATUS_OPTIONS.map(([val, label]) => (
+                          <label key={val} className="dash-filter-check">
+                            <input
+                              type="checkbox"
+                              checked={filterStatuses.includes(val)}
+                              onChange={() => toggleStatus(val)}
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="dash-filter-section">
+                        <div className="dash-filter-heading">Sort by</div>
+                        {USER_SORT_OPTIONS.map((opt) => {
+                          const active = sortCriteria.find((s) => s.key === opt.key);
+                          return (
+                            <div key={opt.key} className="dash-filter-sort-row">
+                              <label className="dash-filter-check">
+                                <input
+                                  type="checkbox"
+                                  checked={!!active}
+                                  onChange={() => toggleSort(opt.key, opt.defaultDir)}
+                                />
+                                {opt.label}
+                              </label>
+                              {active && (
+                                <button
+                                  type="button"
+                                  className="dash-filter-dir"
+                                  onClick={() => flipSortDir(opt.key)}
+                                >
+                                  {active.dir === 'asc' ? opt.asc : opt.desc}
+                                  <span className="material-symbols-outlined">
+                                    {active.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="dash-filter-foot">
+                        <button type="button" className="dash-filter-reset" onClick={resetFilters}>
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="dash-controls-spacer" />
@@ -798,17 +952,18 @@ export default function AdminPanel() {
                       <th>User</th>
                       <th className="dash-th-center">Role</th>
                       <th className="dash-th-center">Status</th>
+                      <th className="dash-th-center">Documents</th>
                       <th className="dash-th-center">Joined</th>
                       <th className="dash-th-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {userLoading ? (
-                      <tr><td colSpan={5} className="dash-empty">Loading users…</td></tr>
+                      <tr><td colSpan={6} className="dash-empty">Loading users…</td></tr>
                     ) : userError ? (
-                      <tr><td colSpan={5} className="dash-empty dash-empty--error">{userError}</td></tr>
+                      <tr><td colSpan={6} className="dash-empty dash-empty--error">{userError}</td></tr>
                     ) : userPageRows.length === 0 ? (
-                      <tr><td colSpan={5} className="dash-empty">No users match your filters.</td></tr>
+                      <tr><td colSpan={6} className="dash-empty">No users match your filters.</td></tr>
                     ) : userPageRows.map((u) => {
                       const roleMeta   = USER_ROLE_META[u.role]     ?? { label: u.role,   cls: '' };
                       const statusMeta = USER_STATUS_META[u.status]  ?? { label: u.status, cls: '' };
@@ -825,6 +980,9 @@ export default function AdminPanel() {
                           </td>
                           <td className="dash-td-center">
                             <span className={`admin-badge ${statusMeta.cls}`}>{statusMeta.label}</span>
+                          </td>
+                          <td className="dash-td-center">
+                            <span className="dash-uploaded">{docCountByOwner[u.id] ?? 0}</span>
                           </td>
                           <td className="dash-td-center">
                             <span className="dash-uploaded">{formatDate(u.created_at)}</span>
@@ -913,6 +1071,14 @@ export default function AdminPanel() {
                                     <button
                                       type="button"
                                       className="dash-menu-item"
+                                      onClick={() => { setUserRowMenu(null); setDocsModalUser(u); }}
+                                    >
+                                      <span className="material-symbols-outlined dash-menu-icon">folder_open</span>
+                                      View Uploaded Documents
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="dash-menu-item"
                                       onClick={() => { setUserRowMenu(null); setUserActionError(''); setConfirmPwResetId(u.id); }}
                                     >
                                       Reset Password
@@ -966,6 +1132,104 @@ export default function AdminPanel() {
           )}
         </section>
       </main>
+
+      {/* ── User documents modal ── */}
+      {docsModalUser && (() => {
+        const userDocs = documents.filter((d) => d.owner_id === docsModalUser.id);
+        return (
+          <div
+            className="admin-modal-overlay"
+            role="presentation"
+            onClick={() => setDocsModalUser(null)}
+          >
+            <div
+              className="admin-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Uploaded documents"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="admin-modal-head">
+                <div className="admin-modal-titles">
+                  <span className="dash-eyebrow">Uploaded Documents</span>
+                  <h2 className="admin-modal-title">{docsModalUser.username || docsModalUser.email || 'User'}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="admin-modal-close"
+                  aria-label="Close"
+                  onClick={() => setDocsModalUser(null)}
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="admin-modal-body">
+                {userDocs.length === 0 ? (
+                  <p className="dash-empty">This user has not uploaded any documents.</p>
+                ) : (
+                  <table className="dash-table">
+                    <thead>
+                      <tr>
+                        <th>Filename</th>
+                        <th>Status</th>
+                        <th>Uploaded</th>
+                        <th className="dash-th-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userDocs.map((doc) => {
+                        const meta = STATUS_META[doc.status] ?? { label: doc.status, cls: '' };
+                        return (
+                          <tr key={doc.id} className="dash-row">
+                            <td>
+                              <div className="dash-file">
+                                <span className="material-symbols-outlined dash-file-icon">
+                                  {FILE_ICON[doc.file_type] ?? 'description'}
+                                </span>
+                                <span className="dash-file-name">{doc.original_filename}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className={`dash-status ${meta.cls}`}>
+                                <span className="dash-status-dot" />
+                                <span className="dash-status-label">{meta.label}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="dash-uploaded">{formatDate(doc.uploaded_at)}</span>
+                            </td>
+                            <td className="dash-td-right">
+                              <div className="admin-action-btns">
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--action"
+                                  onClick={() => handleView(doc)}
+                                >
+                                  <span className="material-symbols-outlined">visibility</span>
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--action"
+                                  onClick={() => handleDownload(doc)}
+                                >
+                                  <span className="material-symbols-outlined">download</span>
+                                  Download
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <footer className="dash-footer">
         <div className="dash-footer-inner">

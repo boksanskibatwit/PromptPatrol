@@ -248,39 +248,26 @@ export default function Redact() {
                     const confirmed = decisions[c.id] === 'confirmed';
                     return (
                       <li key={c.id} className="redact-cand">
-                        <input
-                          type="checkbox"
-                          className="redact-cand-check"
-                          checked={confirmed}
-                          onChange={() =>
-                            setDecision(c.id, confirmed ? 'rejected' : 'confirmed')
-                          }
-                          aria-label={`Redact ${ENTITY_LABEL[c.entity] ?? c.entity}`}
-                        />
                         <div className="redact-cand-info">
                           <span className="redact-cand-entity">
                             {ENTITY_LABEL[c.entity] ?? c.entity}
                           </span>
                           <span className="redact-cand-text">{c.text}</span>
                         </div>
-                        <div className="redact-cand-actions">
-                          <button
-                            type="button"
-                            className={`redact-yes ${confirmed ? 'redact-yes--on' : ''}`}
-                            onClick={() => setDecision(c.id, 'confirmed')}
-                            aria-label="Confirm redaction"
-                          >
-                            <span className="material-symbols-outlined">check</span>
-                          </button>
-                          <button
-                            type="button"
-                            className={`redact-no ${!confirmed ? 'redact-no--on' : ''}`}
-                            onClick={() => setDecision(c.id, 'rejected')}
-                            aria-label="Reject redaction"
-                          >
-                            <span className="material-symbols-outlined">close</span>
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={confirmed}
+                          className={`redact-switch ${confirmed ? 'redact-switch--on' : 'redact-switch--off'}`}
+                          onClick={() =>
+                            setDecision(c.id, confirmed ? 'rejected' : 'confirmed')
+                          }
+                          aria-label={`Redact ${ENTITY_LABEL[c.entity] ?? c.entity}`}
+                        >
+                          <span className="redact-switch-track">
+                            <span className="redact-switch-thumb" />
+                          </span>
+                        </button>
                       </li>
                     );
                   })}
