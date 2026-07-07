@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { peekPendingUpload, clearPendingUpload } from '../lib/uploadHandoff';
 import { analyzeDocument, redactDocument, extensionOf } from '../lib/api';
@@ -22,6 +22,8 @@ const ENTITY_LABEL = {
   phone_number: 'Phone_Number',
 };
 
+const ENTITY_OPTIONS = Object.entries(ENTITY_LABEL);
+
 function renderPreview(page, decisions) {
   const pageText = page.text || page.preview.join('\n');
   const baseOffset = page.start_offset ?? 0;
@@ -40,13 +42,24 @@ function renderPreview(page, decisions) {
   confirmed.forEach((c) => {
     if (c.localStart < cursor) return;
     if (c.localStart > cursor) {
-      parts.push({ type: 'text', value: pageText.slice(cursor, c.localStart) });
+      parts.push({
+        type: 'text',
+        value: pageText.slice(cursor, c.localStart),
+        start: cursor,
+        end: c.localStart,
+      });
     }
-    parts.push({ type: 'redacted', value: ENTITY_LABEL[c.entity] ?? c.entity, id: c.id });
+    parts.push({
+      type: 'redacted',
+      value: ENTITY_LABEL[c.entity] ?? c.entity,
+      id: c.id,
+      start: c.localStart,
+      end: c.localEnd,
+    });
     cursor = c.localEnd;
   });
   if (cursor < pageText.length) {
-    parts.push({ type: 'text', value: pageText.slice(cursor) });
+    parts.push({ type: 'text', value: pageText.slice(cursor), start: cursor, end: pageText.length });
   }
 
   return parts.length ? parts : [{ type: 'text', value: 'No readable text was found on this page.' }];
@@ -65,6 +78,9 @@ export default function Redact() {
   const [pageIdx, setPageIdx] = useState(0);
   const [decisions, setDecisions] = useState({});
   const [error, setError] = useState('');
+  const [manualEntity, setManualEntity] = useState(ENTITY_OPTIONS[0][0]);
+  const [selectionError, setSelectionError] = useState('');
+  const previewRef = useRef(null);
 
   // No file means the user hit /redact directly — send them back. Otherwise
   // capture is done, so clear the hand-off slot (in an effect, not render).
@@ -117,6 +133,95 @@ export default function Redact() {
 
   function setDecision(id, value) {
     setDecisions((d) => ({ ...d, [id]: value }));
+  }
+
+  function setCandidateEntity(id, entity) {
+    setPages((currentPages) =>
+      currentPages?.map((p) => ({
+        ...p,
+        candidates: p.candidates.map((c) => (c.id === id ? { ...c, entity } : c)),
+      })) ?? currentPages
+    );
+  }
+
+  function readPreviewSelection() {
+    const root = previewRef.current;
+    const selection = window.getSelection();
+    if (!root || !selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!root.contains(range.commonAncestorContainer)) {
+      return null;
+    }
+
+    function offsetFromBoundary(container, offset) {
+      if (container.nodeType === Node.TEXT_NODE) {
+        const span = container.parentElement?.closest?.('[data-local-start][data-local-end]');
+        if (!span || span.dataset.partType !== 'text') return null;
+        return Number(span.dataset.localStart) + offset;
+      }
+
+      const before = container.childNodes[Math.max(0, offset - 1)];
+      const at = container.childNodes[offset];
+      const element = at || before;
+      const span = element?.closest?.('[data-local-start][data-local-end]');
+      if (!span || span.dataset.partType !== 'text') return null;
+      return at ? Number(span.dataset.localStart) : Number(span.dataset.localEnd);
+    }
+
+    const localStart = offsetFromBoundary(range.startContainer, range.startOffset);
+    const localEnd = offsetFromBoundary(range.endContainer, range.endOffset);
+    if (localStart === null || localEnd === null || localEnd <= localStart) return null;
+
+    return {
+      start: (page.start_offset ?? 0) + localStart,
+      end: (page.start_offset ?? 0) + localEnd,
+      text: (page.text || page.preview.join('\n')).slice(localStart, localEnd),
+    };
+  }
+
+  function addManualRedaction() {
+    setSelectionError('');
+    const selected = readPreviewSelection();
+    const selectedText = selected?.text?.trim();
+
+    if (!selected || !selectedText) {
+      setSelectionError('Select unredacted text in the preview before adding a manual redaction.');
+      return;
+    }
+
+    const overlaps = page.candidates.some(
+      (c) =>
+        decisions[c.id] === 'confirmed' &&
+        selected.start < c.end_offset &&
+        c.start_offset < selected.end
+    );
+    if (overlaps) {
+      setSelectionError('That selection overlaps an existing redaction.');
+      return;
+    }
+
+    const id = `manual-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const candidate = {
+      id,
+      entity: manualEntity,
+      text: selected.text,
+      page: pageIdx + 1,
+      start_offset: selected.start,
+      end_offset: selected.end,
+      confidence: 1,
+      source: 'manual',
+    };
+
+    setPages((currentPages) =>
+      currentPages.map((p, idx) =>
+        idx === pageIdx ? { ...p, candidates: [...p.candidates, candidate] } : p
+      )
+    );
+    setDecisions((d) => ({ ...d, [id]: 'confirmed' }));
+    window.getSelection()?.removeAllRanges();
   }
 
   async function handleApply() {
@@ -215,15 +320,28 @@ export default function Redact() {
             {/* Left: document preview */}
             <section className="redact-preview">
               <h2 className="redact-col-title">Preview</h2>
-              <div className="redact-preview-body">
+              <div className="redact-preview-body" ref={previewRef}>
                 <pre className="redact-preview-text">
                   {previewParts.map((part, i) =>
                     part.type === 'redacted' ? (
-                      <mark key={`${part.id}-${i}`} className="redact-preview-mask">
+                      <mark
+                        key={`${part.id}-${i}`}
+                        className="redact-preview-mask"
+                        data-local-start={part.start}
+                        data-local-end={part.end}
+                        data-part-type="redacted"
+                      >
                         {part.value}
                       </mark>
                     ) : (
-                      <span key={i}>{part.value}</span>
+                      <span
+                        key={i}
+                        data-local-start={part.start}
+                        data-local-end={part.end}
+                        data-part-type="text"
+                      >
+                        {part.value}
+                      </span>
                     )
                   )}
                 </pre>
@@ -237,6 +355,34 @@ export default function Redact() {
                 {confirmedCount} of {allCandidates.length} items marked for
                 redaction across all pages.
               </p>
+              <div className="redact-manual">
+                <div className="redact-manual-row">
+                  <label className="redact-manual-field">
+                    <span>Entity type</span>
+                    <select
+                      value={manualEntity}
+                      onChange={(e) => setManualEntity(e.target.value)}
+                      disabled={storing}
+                    >
+                      {ENTITY_OPTIONS.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="redact-nav-btn redact-manual-add"
+                    disabled={storing}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={addManualRedaction}
+                  >
+                    Add selected text
+                  </button>
+                </div>
+                {selectionError && <p className="redact-manual-error">{selectionError}</p>}
+              </div>
 
               {page.candidates.length === 0 ? (
                 <p className="redact-candidates-empty">
@@ -252,6 +398,21 @@ export default function Redact() {
                           <span className="redact-cand-entity">
                             {ENTITY_LABEL[c.entity] ?? c.entity}
                           </span>
+                          {c.source === 'manual' && (
+                            <select
+                              className="redact-cand-select"
+                              value={c.entity}
+                              disabled={storing}
+                              onChange={(e) => setCandidateEntity(c.id, e.target.value)}
+                              aria-label="Manual redaction entity type"
+                            >
+                              {ENTITY_OPTIONS.map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                           <span className="redact-cand-text">{c.text}</span>
                         </div>
                         <button

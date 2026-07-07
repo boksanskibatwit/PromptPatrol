@@ -41,6 +41,8 @@ PERSISTABLE_ENTITY_TYPES = {
     "credit_card",
     "routing_number",
     "date",
+    "email",
+    "phone_number",
 }
 
 
