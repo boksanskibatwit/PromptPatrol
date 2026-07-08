@@ -1,0 +1,34 @@
+# Fargate container image for the PromptPatrol backend.
+#
+# Unlike the Lambda image (Dockerfile, CMD app.main.handler), Fargate runs a
+# normal long-lived web server, so this image runs the FastAPI app under uvicorn
+# on port 8000. Same app code; different base image and entrypoint.
+#
+# Models are baked in at build time. NOTE: uvicorn imports app.main at startup,
+# which loads spaCy-large + presidio (~100s) before the port opens — give the
+# ECS/ALB health check a generous grace period (~300s).
+
+FROM python:3.13-slim
+
+# System libraries the ML stack loads at runtime: OpenCV (via easyocr) needs
+# libGL + glib.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Bake the spaCy model presidio loads at import.
+RUN python -m spacy download en_core_web_lg
+
+COPY app ./app
+
+# Bake the easyocr 'en' models into the directory the engine reads
+# (app/ml/ocr_models, resolved here as /app/app/ml/ocr_models).
+RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False, model_storage_directory='/app/app/ml/ocr_models', download_enabled=True)"
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

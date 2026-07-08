@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadBackendSecrets",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameters"],
+      "Resource": "arn:aws:ssm:us-east-2:533266965830:parameter/promptpatrol/backend/*"
+    },
+    {
+      "Sid": "DecryptSecretsViaSsm",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "kms:ViaService": "ssm.us-east-2.amazonaws.com" } }
+    }
+  ]
+}
