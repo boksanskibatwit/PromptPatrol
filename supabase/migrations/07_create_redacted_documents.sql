@@ -1,7 +1,7 @@
 -- Migration 7: Create redacted_documents table
 -- PromptPatrol depends on 005_create_documents.sql
 
-CREATE TABLE redacted_documents (
+CREATE TABLE IF NOT EXISTS redacted_documents (
     id                      UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     source_document_id      UUID            NOT NULL UNIQUE REFERENCES documents(id) ON DELETE CASCADE,
     s3_bucket               VARCHAR(100)    NOT NULL,       -- 'promptpatrol-redacted' per deployment diagram
@@ -17,6 +17,7 @@ CREATE TABLE redacted_documents (
 ALTER TABLE redacted_documents ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see redacted documents belonging to their own source documents
+DROP POLICY IF EXISTS "users_select_own_redacted" ON redacted_documents;
 CREATE POLICY "users_select_own_redacted"
     ON redacted_documents
     FOR SELECT
@@ -29,6 +30,7 @@ CREATE POLICY "users_select_own_redacted"
     );
 
 -- Admins can read all redacted documents
+DROP POLICY IF EXISTS "admin_select_all_redacted" ON redacted_documents;
 CREATE POLICY "admin_select_all_redacted"
     ON redacted_documents
     FOR SELECT
@@ -47,7 +49,7 @@ CREATE POLICY "admin_select_all_redacted"
 -- Indexes
 
 -- Primary lookup — backend fetches this row to generate presigned URL
-CREATE INDEX idx_redacted_source_document_id ON redacted_documents (source_document_id);
+CREATE INDEX IF NOT EXISTS idx_redacted_source_document_id ON redacted_documents (source_document_id);
 
 -- Used to identify rows where S3 write is pending confirmation
-CREATE INDEX idx_redacted_written_to_s3_at ON redacted_documents (written_to_s3_at);
+CREATE INDEX IF NOT EXISTS idx_redacted_written_to_s3_at ON redacted_documents (written_to_s3_at);

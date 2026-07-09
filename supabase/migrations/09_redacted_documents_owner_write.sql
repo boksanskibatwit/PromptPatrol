@@ -10,6 +10,7 @@
 -- ON DELETE CASCADE from documents, so deleting the owning document removes the
 -- redacted row automatically (documents already has an owner DELETE policy).
 
+DROP POLICY IF EXISTS "users_insert_own_redacted" ON redacted_documents;
 CREATE POLICY "users_insert_own_redacted"
     ON redacted_documents
     FOR INSERT
@@ -21,6 +22,7 @@ CREATE POLICY "users_insert_own_redacted"
         )
     );
 
+DROP POLICY IF EXISTS "users_update_own_redacted" ON redacted_documents;
 CREATE POLICY "users_update_own_redacted"
     ON redacted_documents
     FOR UPDATE

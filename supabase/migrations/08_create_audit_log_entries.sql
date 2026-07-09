@@ -1,7 +1,7 @@
 -- Migration 8: Create audit_log_entries table
 -- PromptPatrol depends on 002_create_users.sql, 005_create_documents.sql
 
-CREATE TABLE audit_log_entries (
+CREATE TABLE IF NOT EXISTS audit_log_entries (
     id                  BIGSERIAL       PRIMARY KEY,                        -- sequential integer, critical for hash chain ordering
     user_id             UUID            REFERENCES users(id),               -- nullable, some actions may be unauthenticated (LOGIN_ATTEMPT)
     document_id         UUID            REFERENCES documents(id),           -- nullable, not all actions are document-related
@@ -25,6 +25,7 @@ ALTER TABLE audit_log_entries ENABLE ROW LEVEL SECURITY;
 -- This is intentional the lockout is the security feature
 
 -- Admins can read all entries
+DROP POLICY IF EXISTS "admin_select_audit_log" ON audit_log_entries;
 CREATE POLICY "admin_select_audit_log"
     ON audit_log_entries
     FOR SELECT
@@ -47,16 +48,16 @@ CREATE POLICY "admin_select_audit_log"
 -- Indexes
 
 -- Hash chain traversal verify-chain walks entries in order
-CREATE INDEX idx_audit_occurred_at ON audit_log_entries (occurred_at);
+CREATE INDEX IF NOT EXISTS idx_audit_occurred_at ON audit_log_entries (occurred_at);
 
 -- Most admin audit queries will filter by user
-CREATE INDEX idx_audit_user_id ON audit_log_entries (user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_user_id ON audit_log_entries (user_id);
 
 -- Filter by action type
-CREATE INDEX idx_audit_action ON audit_log_entries (action);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log_entries (action);
 
 -- Document scoped audit trail
-CREATE INDEX idx_audit_document_id ON audit_log_entries (document_id);
+CREATE INDEX IF NOT EXISTS idx_audit_document_id ON audit_log_entries (document_id);
 
 -- Hash chain integrity prev_id lookups during verify-chain
-CREATE INDEX idx_audit_prev_id ON audit_log_entries (prev_id);
+CREATE INDEX IF NOT EXISTS idx_audit_prev_id ON audit_log_entries (prev_id);

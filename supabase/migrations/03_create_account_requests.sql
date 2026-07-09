@@ -1,7 +1,7 @@
 -- Migration 3: Create account_requests table
 -- PromptPatrol depends on 002_create_users.sql
 
-CREATE TABLE account_requests (
+CREATE TABLE IF NOT EXISTS account_requests (
     id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     requested_email     VARCHAR(255)    NOT NULL,
     requested_name      VARCHAR(200)    NOT NULL,
@@ -19,6 +19,7 @@ ALTER TABLE account_requests ENABLE ROW LEVEL SECURITY;
 -- No SELECT policy for regular users — a requester has no account yet so auth.uid() won't match anything. They submit and wait for an email.
 
 -- Admins can read all pending and historical requests
+DROP POLICY IF EXISTS "admin_select_all_requests" ON account_requests;
 CREATE POLICY "admin_select_all_requests"
     ON account_requests
     FOR SELECT
@@ -31,6 +32,7 @@ CREATE POLICY "admin_select_all_requests"
     );
 
 -- Admins can update requests (approve / reject sets status, reviewed_by, reviewed_at)
+DROP POLICY IF EXISTS "admin_update_requests" ON account_requests;
 CREATE POLICY "admin_update_requests"
     ON account_requests
     FOR UPDATE
@@ -43,6 +45,7 @@ CREATE POLICY "admin_update_requests"
     );
 
 -- INSERT is open to unauthenticated users for new user auth
+DROP POLICY IF EXISTS "public_insert_request" ON account_requests;
 CREATE POLICY "public_insert_request"
     ON account_requests
     FOR INSERT
@@ -51,7 +54,7 @@ CREATE POLICY "public_insert_request"
 -- Indexes
 
 -- Filtering by status = 'pending'
-CREATE INDEX idx_account_requests_status ON account_requests (status);
+CREATE INDEX IF NOT EXISTS idx_account_requests_status ON account_requests (status);
 
 --Check if an email already has a pending request
-CREATE INDEX idx_account_requests_email ON account_requests (requested_email);
+CREATE INDEX IF NOT EXISTS idx_account_requests_email ON account_requests (requested_email);

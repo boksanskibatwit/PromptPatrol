@@ -1,7 +1,7 @@
 -- Migration 002: Create users table
 -- PromptPatrol depends on 001_create_enums.sql
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     email               VARCHAR(255)    NOT NULL UNIQUE,
     username            VARCHAR(100)    NOT NULL,
@@ -17,6 +17,7 @@ CREATE TABLE users (
 alter table users enable row level security;
 
 -- Users can only read their own row
+DROP POLICY IF EXISTS "admin_select_all_users" ON users;
 create policy "admin_select_all_users"
   on users
   for select
@@ -31,7 +32,7 @@ create policy "admin_select_all_users"
 
 -- Indexes
 -- Email is the primary lookup for login
-create INDEX idx_users_email on users (email);
+create INDEX IF NOT EXISTS idx_users_email on users (email);
  
 -- Role index supports admin policy checks
-create INDEX idx_users_role on users (role);
+create INDEX IF NOT EXISTS idx_users_role on users (role);

@@ -2,7 +2,7 @@
 -- PromptPatrol depends on 002_create_users.sql
 -- This table stores only metadata
 
-CREATE TABLE documents (
+CREATE TABLE IF NOT EXISTS documents (
     id                  UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id            UUID                NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     original_filename   VARCHAR(500)        NOT NULL,
@@ -20,30 +20,35 @@ CREATE TABLE documents (
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see their own documents
+DROP POLICY IF EXISTS "users_select_own_documents" ON documents;
 CREATE POLICY "users_select_own_documents"
     ON documents
     FOR SELECT
     USING (owner_id = auth.uid());
 
 -- Users can insert their own documents
+DROP POLICY IF EXISTS "users_insert_own_documents" ON documents;
 CREATE POLICY "users_insert_own_documents"
     ON documents
     FOR INSERT
     WITH CHECK (owner_id = auth.uid());
 
 -- Users can update their own documents
+DROP POLICY IF EXISTS "users_update_own_documents" ON documents;
 CREATE POLICY "users_update_own_documents"
     ON documents
     FOR UPDATE
     USING (owner_id = auth.uid());
 
 -- Users can delete their own documents
+DROP POLICY IF EXISTS "users_delete_own_documents" ON documents;
 CREATE POLICY "users_delete_own_documents"
     ON documents
     FOR DELETE
     USING (owner_id = auth.uid());
 
 -- Admins can read all documents
+DROP POLICY IF EXISTS "admin_select_all_documents" ON documents;
 CREATE POLICY "admin_select_all_documents"
     ON documents
     FOR SELECT
@@ -58,10 +63,10 @@ CREATE POLICY "admin_select_all_documents"
 -- Indexes
 
 -- Primary lookup every document query filters by owner
-CREATE INDEX idx_documents_owner_id ON documents (owner_id);
+CREATE INDEX IF NOT EXISTS idx_documents_owner_id ON documents (owner_id);
 
 -- Status index: used to filter scanning/review/stored/failed views
-CREATE INDEX idx_documents_status ON documents (status);
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents (status);
 
 -- Useful for audit queries filtering by upload time
-CREATE INDEX idx_documents_uploaded_at ON documents (uploaded_at);
+CREATE INDEX IF NOT EXISTS idx_documents_uploaded_at ON documents (uploaded_at);

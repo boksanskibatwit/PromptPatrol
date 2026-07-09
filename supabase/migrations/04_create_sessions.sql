@@ -2,7 +2,7 @@
 -- PromptPatrol depends on 002_create_users.sql
 
 
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID            NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     jwt_hash        VARCHAR(255)    NOT NULL,               -- hashed JWT, never store raw token
@@ -18,12 +18,14 @@ CREATE TABLE sessions (
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see their own sessions
+DROP POLICY IF EXISTS "users_select_own_sessions" ON sessions;
 CREATE POLICY "users_select_own_sessions"
     ON sessions
     FOR SELECT
     USING (user_id = auth.uid());
 
 -- Admins can see all sessions
+DROP POLICY IF EXISTS "admin_select_all_sessions" ON sessions;
 CREATE POLICY "admin_select_all_sessions"
     ON sessions
     FOR SELECT
@@ -36,12 +38,14 @@ CREATE POLICY "admin_select_all_sessions"
     );
 
 -- Users can delete their own sessions (logout: POST /auth/logout)
+DROP POLICY IF EXISTS "users_delete_own_sessions" ON sessions;
 CREATE POLICY "users_delete_own_sessions"
     ON sessions
     FOR DELETE
     USING (user_id = auth.uid());
 
 -- Admins can delete any session
+DROP POLICY IF EXISTS "admin_delete_any_session" ON sessions;
 CREATE POLICY "admin_delete_any_session"
     ON sessions
     FOR DELETE
@@ -59,10 +63,10 @@ CREATE POLICY "admin_delete_any_session"
 -- Indexes
 
 -- Primary lookup: backend validates incoming JWTs against this
-CREATE INDEX idx_sessions_jwt_hash ON sessions (jwt_hash);
+CREATE INDEX IF NOT EXISTS idx_sessions_jwt_hash ON sessions (jwt_hash);
 
 -- Used for listing a user's active sessions and force revoke by admin
-CREATE INDEX idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
 
 -- Useful for expiry cleanup jobs. Expired sessions can be purged periodically
-CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);

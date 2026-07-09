@@ -1,7 +1,7 @@
 -- Migration 006: Create redaction_candidates table
 -- PromptPatrol depends on 005_create_documents.sql
 
-CREATE TABLE redaction_candidates (
+CREATE TABLE IF NOT EXISTS redaction_candidates (
     id              UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id     UUID                NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     entity_type     entity_type_t       NOT NULL,
@@ -21,6 +21,7 @@ ALTER TABLE redaction_candidates ENABLE ROW LEVEL SECURITY;
 
 -- Users can only see candidates belonging to their own documents
 -- Joins back to documents table to verify ownership
+DROP POLICY IF EXISTS "users_select_own_candidates" ON redaction_candidates;
 CREATE POLICY "users_select_own_candidates"
     ON redaction_candidates
     FOR SELECT
@@ -33,6 +34,7 @@ CREATE POLICY "users_select_own_candidates"
     );
 
 -- Users can update candidates on their own documents
+DROP POLICY IF EXISTS "users_update_own_candidates" ON redaction_candidates;
 CREATE POLICY "users_update_own_candidates"
     ON redaction_candidates
     FOR UPDATE
@@ -47,6 +49,7 @@ CREATE POLICY "users_update_own_candidates"
 -- INSERT only via backend service role — candidates are created by the ML pipeline, never directly by the client
 
 -- Admins can read all candidates
+DROP POLICY IF EXISTS "admin_select_all_candidates" ON redaction_candidates;
 CREATE POLICY "admin_select_all_candidates"
     ON redaction_candidates
     FOR SELECT
@@ -61,10 +64,10 @@ CREATE POLICY "admin_select_all_candidates"
 -- Indexes
 
 -- Primary lookup: every candidate query filters by document
-CREATE INDEX idx_candidates_document_id ON redaction_candidates (document_id);
+CREATE INDEX IF NOT EXISTS idx_candidates_document_id ON redaction_candidates (document_id);
 
 -- Used to filter candidates still awaiting analyst review
-CREATE INDEX idx_candidates_review_status ON redaction_candidates (review_status);
+CREATE INDEX IF NOT EXISTS idx_candidates_review_status ON redaction_candidates (review_status);
 
 -- Useful for filtering by entity type in the review UI
-CREATE INDEX idx_candidates_entity_type ON redaction_candidates (entity_type);
+CREATE INDEX IF NOT EXISTS idx_candidates_entity_type ON redaction_candidates (entity_type);
