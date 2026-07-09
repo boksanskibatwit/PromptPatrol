@@ -1,0 +1,13 @@
+# Keep the image small and never bake secrets or local cruft into it.
+venv/
+build/
+lambda.zip
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
+.env.*
+deploy/
+.pytest_cache/
+app/ml/Testfiles/
+app/ml/ocr_models/
