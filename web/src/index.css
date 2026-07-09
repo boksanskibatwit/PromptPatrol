@@ -1857,6 +1857,70 @@ body {
   margin-bottom: 16px;
 }
 
+.redact-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  margin-bottom: 18px;
+  background: #fff;
+  border: 1px solid var(--outline-var);
+  border-radius: 8px;
+}
+
+.redact-manual-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.redact-manual-field {
+  display: flex;
+  flex: 1;
+  min-width: 180px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.redact-manual-field span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--on-surface-var);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.redact-manual-field select,
+.redact-cand-select {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--outline-var);
+  border-radius: 4px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  color: var(--charcoal);
+}
+
+.redact-manual-field select:focus,
+.redact-cand-select:focus {
+  outline: none;
+  border-color: var(--charcoal);
+}
+
+.redact-manual-add {
+  min-height: 38px;
+}
+
+.redact-manual-error {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--error);
+}
+
 .redact-candidates-empty {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 15px;
@@ -1894,6 +1958,12 @@ body {
   font-size: 13px;
   font-weight: 500;
   color: var(--on-surface-var);
+}
+
+.redact-cand-select {
+  max-width: 220px;
+  min-height: 34px;
+  margin: 4px 0;
 }
 
 .redact-cand-text {
