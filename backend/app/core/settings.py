@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
     s3_bucket_redacted: str = "promptpatrol-redacted"
+    s3_bucket_audit: str = "prompt-patrol-audit-log"
 
 
 # On Lambda this pulls secrets from SSM into the environment first; locally it's

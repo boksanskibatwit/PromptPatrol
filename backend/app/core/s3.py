@@ -38,6 +38,11 @@ def _client():
     return boto3.client("s3", **kwargs)
 
 
+def client():
+    """Return the shared S3 client for other backend-owned buckets."""
+    return _client()
+
+
 def object_key(document_id: str, file_type: str) -> str:
     return f"{document_id}.{file_type}"
 

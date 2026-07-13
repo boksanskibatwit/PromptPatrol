@@ -23,6 +23,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
+from app.core.audit import append_redaction_audit_log
 from app.core import s3
 from app.db.supabase import get_service_client, _client_for_token
 from app.ml import engine
