@@ -60,6 +60,18 @@ async def _unban_auth_user(auth_user_id: str) -> None:
             headers=AUTH_HEADERS,
             json={"ban_duration": "none"},
         )
+    if resp.status_code == 404:
+        # The stored auth_user_id points to no real auth user — typically an
+        # orphan request from a duplicate-email signup (Supabase returned a fake
+        # user id). It can never be approved; the admin should reject it instead.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This request's auth user no longer exists — it's likely a "
+                "duplicate signup for an email that already has an account. "
+                "Reject this request instead of approving it."
+            ),
+        )
     if resp.status_code not in (200, 204):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -109,6 +121,38 @@ async def signup_ban(body: SignupBanRequest):
     their ID; the actual ban uses the service role key server-side.
     """
     svc = get_service_client()
+
+    # Reject signups for an email that already has an account. Supabase's
+    # signUp() does NOT error on a duplicate email (anti-enumeration): for a
+    # confirmed user it returns a fake user id, for an unconfirmed one it
+    # resends confirmation and returns the existing id. Either way the client
+    # can't reliably tell, so we gate authoritatively on our own users table —
+    # otherwise we'd record a confusing duplicate request that "approves" but
+    # provisions no new user.
+    existing = (
+        svc.table("users").select("id").eq("email", body.email).limit(1).execute()
+    )
+    if existing.data:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists. Try logging in or resetting your password.",
+        )
+
+    # Guard against a second pending request for the same email (before any
+    # user row exists yet) so the admin queue stays free of duplicates.
+    pending = (
+        svc.table("account_requests")
+        .select("id")
+        .eq("requested_email", body.email)
+        .eq("status", "pending")
+        .limit(1)
+        .execute()
+    )
+    if pending.data:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A request for this email is already pending admin review.",
+        )
 
     # Insert account_requests row (upsert in case of duplicate submit).
     svc.table("account_requests").upsert(

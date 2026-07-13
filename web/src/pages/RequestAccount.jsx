@@ -30,6 +30,16 @@ export default function RequestAccount() {
       return;
     }
 
+    // When the email already belongs to an account, Supabase does NOT error
+    // (anti-enumeration) — it returns a fake user with a random id and an empty
+    // identities array. Detect that and stop, otherwise we'd record a bogus
+    // account_request whose auth_user_id can never be banned/approved.
+    if (signUpData?.user?.identities?.length === 0) {
+      setError('An account with this email already exists. Try logging in or resetting your password.');
+      setLoading(false);
+      return;
+    }
+
     const authUserId = signUpData?.user?.id;
     if (!authUserId) {
       setError('Signup succeeded but user ID was missing. Please try again.');

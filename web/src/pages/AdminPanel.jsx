@@ -408,6 +408,20 @@ export default function AdminPanel() {
     return counts;
   }, [documents]);
 
+  // Map owner_id → display name so the Documents table can show the user
+  // rather than the raw UUID.
+  const userById = useMemo(() => {
+    const map = {};
+    for (const u of users) map[u.id] = u;
+    return map;
+  }, [users]);
+
+  function ownerLabel(ownerId) {
+    if (!ownerId) return '—';
+    const u = userById[ownerId];
+    return u?.username || u?.email || ownerId;
+  }
+
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
     const rows = users.filter((u) => {
@@ -535,7 +549,7 @@ export default function AdminPanel() {
               onClick={() => setTab('documents')}
             >
               <span className="material-symbols-outlined">folder_open</span>
-              All Documents
+              Documents
             </button>
             <button
               type="button"
@@ -774,7 +788,7 @@ export default function AdminPanel() {
                             </div>
                           </td>
                           <td>
-                            <span className="dash-uploaded admin-owner-id">{doc.owner_id ?? '—'}</span>
+                            <span className="dash-uploaded admin-owner-id">{ownerLabel(doc.owner_id)}</span>
                           </td>
                           <td>
                             <div className={`dash-status ${meta.cls}`}>
