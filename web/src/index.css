@@ -2220,10 +2220,8 @@ body {
 }
 
 .admin-owner-id {
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
   color: var(--on-surface-var);
-  max-width: 180px;
+  max-width: 200px;
   display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
