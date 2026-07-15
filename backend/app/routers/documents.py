@@ -190,6 +190,15 @@ async def redact_document(
                     for c in persisted_decisions
                 ]
             ).execute()
+        append_redaction_audit_log(
+            user_id=str(user.id),
+            document=doc,
+            decisions=decisions,
+            redacted_s3_bucket=s3.settings.s3_bucket_redacted,
+            redacted_s3_key=key,
+            occurred_at=now,
+            service_client=svc,
+        )
     except Exception as exc:
         logger.exception("Failed to record redaction rows for document %s", doc["id"])
         try:

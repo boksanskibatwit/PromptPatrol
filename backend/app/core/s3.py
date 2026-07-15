@@ -1,5 +1,5 @@
 """
-S3 access for redacted documents.
+S3 access for redacted documents and audit records.
 
 All object I/O goes through the backend with these helpers — the browser never
 talks to the bucket (the old API Gateway proxy path is retired). Object keys
@@ -53,6 +53,17 @@ def put_redacted(key: str, body: bytes, file_type: str) -> None:
         Key=key,
         Body=body,
         ContentType=CONTENT_TYPES.get(file_type, "application/octet-stream"),
+    )
+
+
+def put_audit_log(key: str, body: bytes) -> None:
+    """Write an immutable JSON audit artifact to the configured audit bucket."""
+    _client().put_object(
+        Bucket=settings.s3_bucket_audit,
+        Key=key,
+        Body=body,
+        ContentType="application/json",
+        ServerSideEncryption="AES256",
     )
 
 

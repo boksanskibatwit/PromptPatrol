@@ -5,8 +5,7 @@ Purpose:
     - Build a sanitized audit event for completed document redactions.
     - Preserve the existing audit_log_entries hash-chain design.
     - Insert audit rows using the Supabase service-role client.
-    - Leave S3 audit-bucket upload as a clearly marked placeholder until the
-      audit bucket setting/helper is wired into the codebase.
+    - Store a JSON copy of each audit event in the configured S3 audit bucket.
 
 Important privacy rule:
     Do not store raw matched PII in the audit log payload. The redaction index
@@ -23,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
+from app.core import s3
 from app.core.settings import settings
 from app.db.supabase import get_service_client
 
@@ -90,7 +90,7 @@ def append_redaction_audit_log(
             calls get_service_client().
 
     Returns:
-        AuditWriteResult containing row/hash/S3 placeholder details.
+        AuditWriteResult containing row/hash/S3 upload details.
     """
 
     svc = service_client or get_service_client()
@@ -121,8 +121,7 @@ def append_redaction_audit_log(
         occurred_at=event_time,
     )
 
-    # Placeholder until S3_BUCKET_AUDIT / put_audit_log is implemented.
-    s3_result = upload_audit_json_to_s3_placeholder(
+    s3_result = upload_audit_json_to_s3(
         audit_payload=audit_payload,
         audit_s3_key=audit_s3_key,
     )
@@ -242,11 +241,9 @@ def build_redaction_audit_payload(
             "s3_key": redacted_s3_key,
         },
         "audit_artifact": {
-            # settings.py does not currently define s3_bucket_audit, so this is
-            # read dynamically and may be None until you add that setting.
-            "s3_bucket": getattr(settings, "s3_bucket_audit", None),
+            "s3_bucket": settings.s3_bucket_audit,
             "s3_key": audit_s3_key,
-            "upload_status": "placeholder_not_uploaded",
+            "upload_status": "uploaded",
         },
         "redaction_summary": {
             "entities_flagged": len(redaction_index_list),
@@ -287,38 +284,26 @@ def build_audit_s3_key(
     )
 
 
-def upload_audit_json_to_s3_placeholder(
+def upload_audit_json_to_s3(
     *,
     audit_payload: Mapping[str, Any],
     audit_s3_key: str,
 ) -> dict[str, Any]:
-    """
-    Placeholder for future S3 audit-bucket upload.
+    """Serialize and upload an audit event to the configured S3 bucket."""
 
-    This intentionally does not perform an S3 call yet because the current
-    codebase exposes settings.s3_bucket_redacted and redacted-document helpers,
-    but not settings.s3_bucket_audit or a put_audit_log helper.
-
-    Replace this function later with something like:
-
-        client.put_object(
-            Bucket=settings.s3_bucket_audit,
-            Key=audit_s3_key,
-            Body=json.dumps(audit_payload, sort_keys=True).encode("utf-8"),
-            ContentType="application/json",
-            ServerSideEncryption="AES256",
-        )
-
-    Or better, add put_audit_log(...) to app/core/s3.py and call it here.
-    """
-
-    _ = json.dumps(audit_payload, sort_keys=True, default=str)  # proves serializable
+    body = json.dumps(
+        audit_payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    s3.put_audit_log(audit_s3_key, body)
 
     return {
-        "uploaded": False,
-        "bucket": getattr(settings, "s3_bucket_audit", None),
+        "uploaded": True,
+        "bucket": settings.s3_bucket_audit,
         "key": audit_s3_key,
-        "status": "placeholder_not_uploaded",
+        "status": "uploaded",
     }
 
 
