@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import field_validator
@@ -6,8 +7,11 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from app.core.secrets import load_ssm_parameters_into_env
 
 
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore")
 
     # App
     # NoDecode stops pydantic-settings from JSON-parsing the env value; the
@@ -35,8 +39,8 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
-    s3_bucket_redacted: str = "promptpatrol-redacted"
-    s3_bucket_audit: str = "prompt-patrol-audit-log"
+    s3_bucket_redacted: str = "prompt-patrol-doc-storage"
+    s3_bucket_audit: str = "promptpatrol-audit"
 
 
 # On Lambda this pulls secrets from SSM into the environment first; locally it's

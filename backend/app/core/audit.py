@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import uuid
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ from app.db.supabase import get_service_client
 
 AUDIT_ACTION_REDACT = "REDACT"
 DEFAULT_AUDIT_PREFIX = "audit-logs"
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -121,10 +123,13 @@ def append_redaction_audit_log(
         occurred_at=event_time,
     )
 
-    s3_result = upload_audit_json_to_s3(
-        audit_payload=audit_payload,
-        audit_s3_key=audit_s3_key,
-    )
+    try:
+        s3_result = upload_audit_json_to_s3(
+            audit_payload=audit_payload,
+            audit_s3_key=audit_s3_key,
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Audit S3 upload failed for event {audit_event_id}: {exc}") from exc
 
     prev = get_previous_audit_row(svc)
     prev_id = prev.get("id") if prev else None
@@ -150,9 +155,14 @@ def append_redaction_audit_log(
         "row_hash": row_hash,
     }
 
-    result = svc.table("audit_log_entries").insert(row_to_insert).execute()
-    inserted = getattr(result, "data", None) or []
-    audit_row_id = inserted[0].get("id") if inserted else None
+    try:
+        result = svc.table("audit_log_entries").insert(row_to_insert).execute()
+    except Exception as exc:
+        logger.exception("Audit DB insert failed for event %s; S3 artifact was still written", audit_event_id)
+        audit_row_id = None
+    else:
+        inserted = getattr(result, "data", None) or []
+        audit_row_id = inserted[0].get("id") if inserted else None
 
     return AuditWriteResult(
         audit_event_id=audit_event_id,
