@@ -11,7 +11,7 @@
       "Sid": "AuditLogBucket",
       "Effect": "Allow",
       "Action": ["s3:PutObject"],
-      "Resource": "arn:aws:s3:::prompt-patrol-audit-log/*"
+      "Resource": "arn:aws:s3:::promptpatrol-audit/*"
     },
     {
       "Sid": "ReadBackendSecrets",
