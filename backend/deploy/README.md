@@ -96,7 +96,7 @@ aws lambda create-function \
   --zip-file fileb://lambda.zip \
   --timeout 30 \
   --memory-size 512 \
-  --environment "Variables={ENVIRONMENT=production,ALLOWED_ORIGINS=http://localhost:5173,S3_BUCKET_REDACTED=prompt-patrol-doc-storage,S3_BUCKET_AUDIT=prompt-patrol-audit-log}"
+  --environment "Variables={ENVIRONMENT=production,ALLOWED_ORIGINS=http://localhost:5173,S3_BUCKET_REDACTED=prompt-patrol-doc-storage,S3_BUCKET_AUDIT=promptpatrol-audit}"
 ```
 
 > If this fails with *"The role cannot be assumed by Lambda"*, IAM just hasn't

@@ -68,7 +68,7 @@ aws lambda create-function \
   --architectures arm64 \
   --timeout 60 \
   --memory-size 3008 \
-  --environment '{"Variables":{"ENVIRONMENT":"production","ALLOWED_ORIGINS":"http://localhost:5173,https://dv0rezuo5ctw7.cloudfront.net","S3_BUCKET_REDACTED":"prompt-patrol-doc-storage","S3_BUCKET_AUDIT":"prompt-patrol-audit-log"}}'
+  --environment '{"Variables":{"ENVIRONMENT":"production","ALLOWED_ORIGINS":"http://localhost:5173,https://dv0rezuo5ctw7.cloudfront.net","S3_BUCKET_REDACTED":"prompt-patrol-doc-storage","S3_BUCKET_AUDIT":"promptpatrol-audit"}}'
 ```
 
 > Memory is 3008 MB for PyTorch headroom — bump it (up to 10240) if you see
