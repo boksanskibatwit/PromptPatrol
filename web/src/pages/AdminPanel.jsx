@@ -78,6 +78,7 @@ export default function AdminPanel() {
 
   // Account requests state
   const [requests, setRequests] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [reqLoading, setReqLoading] = useState(true);
   const [reqError, setReqError] = useState('');
   const [reqFilter, setReqFilter] = useState('pending');
@@ -202,6 +203,14 @@ export default function AdminPanel() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [docsModalUser]);
+
+  // Re-fetch all three datasets without a full page reload (which would
+  // bounce through login/MFA).
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([loadRequests(), loadDocuments(), loadUsers()]);
+    setRefreshing(false);
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -539,6 +548,16 @@ export default function AdminPanel() {
               <span className="dash-eyebrow">Administration</span>
               <h1 className="dash-title">Admin Panel</h1>
             </div>
+            <button
+              type="button"
+              className={`dash-refresh-btn ${refreshing ? 'dash-refresh-btn--spinning' : ''}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Reload requests, users, and documents"
+            >
+              <span className="material-symbols-outlined">refresh</span>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
           </div>
 
           {/* Tab bar */}

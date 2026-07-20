@@ -122,15 +122,20 @@ async def signup_ban(body: SignupBanRequest):
     """
     svc = get_service_client()
 
-    # Reject signups for an email that already has an account. Supabase's
-    # signUp() does NOT error on a duplicate email (anti-enumeration): for a
-    # confirmed user it returns a fake user id, for an unconfirmed one it
-    # resends confirmation and returns the existing id. Either way the client
-    # can't reliably tell, so we gate authoritatively on our own users table —
-    # otherwise we'd record a confusing duplicate request that "approves" but
-    # provisions no new user.
+    # Reject a signup whose email belongs to a LIVE account. Careful: the
+    # on_auth_user_created trigger inserts a public.users row for THIS signup
+    # (id == body.auth_user_id) before we run, so we must only reject when a
+    # users row holds this email under a DIFFERENT id. That row is guaranteed
+    # to be a live account: the trigger reclaims orphaned rows (auth user
+    # deleted) for this email before inserting, so stale rows can't false-
+    # positive here — which is what makes a deleted account's email reusable.
     existing = (
-        svc.table("users").select("id").eq("email", body.email).limit(1).execute()
+        svc.table("users")
+        .select("id")
+        .eq("email", body.email)
+        .neq("id", body.auth_user_id)
+        .limit(1)
+        .execute()
     )
     if existing.data:
         raise HTTPException(
@@ -138,21 +143,12 @@ async def signup_ban(body: SignupBanRequest):
             detail="An account with this email already exists. Try logging in or resetting your password.",
         )
 
-    # Guard against a second pending request for the same email (before any
-    # user row exists yet) so the admin queue stays free of duplicates.
-    pending = (
-        svc.table("account_requests")
-        .select("id")
-        .eq("requested_email", body.email)
-        .eq("status", "pending")
-        .limit(1)
-        .execute()
-    )
-    if pending.data:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A request for this email is already pending admin review.",
-        )
+    # Clear stale request rows left by prior (since-deleted or superseded)
+    # accounts on this email, so the admin queue never shows ghosts and the
+    # upsert below can't create a duplicate-email second row.
+    svc.table("account_requests").delete().eq("requested_email", body.email).neq(
+        "auth_user_id", body.auth_user_id
+    ).execute()
 
     # Insert account_requests row (upsert in case of duplicate submit).
     svc.table("account_requests").upsert(
@@ -360,6 +356,11 @@ async def delete_user(
     result = svc.table("users").delete().eq("id", user_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="User not found.")
+
+    # Remove their account_requests row too — a leftover row would show a ghost
+    # entry in the admin queue and (before the signup guard was fixed) blocked
+    # the email from ever being registered again.
+    svc.table("account_requests").delete().eq("auth_user_id", user_id).execute()
 
     # Delete from Supabase Auth so the account is fully removed.
     async with httpx.AsyncClient() as client:
