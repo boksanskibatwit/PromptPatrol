@@ -2,6 +2,7 @@
 .env
 *.env
 env
+web/.env
 .gitattributes
 
 # Python

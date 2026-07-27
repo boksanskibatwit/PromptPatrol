@@ -85,3 +85,15 @@ export async function deleteDocument(documentId) {
   });
   if (!res.ok) throw new Error(await parseError(res, `Delete failed (${res.status})`));
 }
+
+/**
+ * Admin-only delete: removes any user's document via the service role, not
+ * just the caller's own. Backend enforces the admin role.
+ */
+export async function adminDeleteDocument(documentId) {
+  const res = await fetch(`${API_URL}/admin/documents/${documentId}`, {
+    method: 'DELETE',
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error(await parseError(res, `Delete failed (${res.status})`));
+}

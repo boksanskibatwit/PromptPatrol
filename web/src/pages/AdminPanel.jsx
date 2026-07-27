@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { setPendingUpload } from '../lib/uploadHandoff';
-import { getDownloadUrl } from '../lib/api';
+import { getDownloadUrl, adminDeleteDocument } from '../lib/api';
 import logo from './PromptPatrol.png';
 
 const PAGE_SIZE = 10;
@@ -78,6 +78,7 @@ export default function AdminPanel() {
 
   // Account requests state
   const [requests, setRequests] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [reqLoading, setReqLoading] = useState(true);
   const [reqError, setReqError] = useState('');
   const [reqFilter, setReqFilter] = useState('pending');
@@ -116,6 +117,7 @@ export default function AdminPanel() {
   const [docPage, setDocPage] = useState(1);
   const [docRowMenu, setDocRowMenu] = useState(null);
   const [docActionError, setDocActionError] = useState('');
+  const [busyDocDelete, setBusyDocDelete] = useState(null);
   const fileInputRef = useRef(null);
 
   const loadRequests = useCallback(async () => {
@@ -203,6 +205,14 @@ export default function AdminPanel() {
     return () => document.removeEventListener('keydown', onKey);
   }, [docsModalUser]);
 
+  // Re-fetch all three datasets without a full page reload (which would
+  // bounce through login/MFA).
+  async function handleRefresh() {
+    setRefreshing(true);
+    await Promise.all([loadRequests(), loadDocuments(), loadUsers()]);
+    setRefreshing(false);
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     navigate('/login');
@@ -256,6 +266,25 @@ export default function AdminPanel() {
       a.remove();
     } catch (e) {
       setDocError(e.message);
+    }
+  }
+
+  // Admin delete works on any owner's document (service-role route). Used from
+  // both the Documents tab and the per-user documents modal.
+  async function handleDeleteDocument(doc) {
+    setDocRowMenu(null);
+    setDocActionError('');
+    if (!window.confirm(`Delete "${doc.original_filename}"? This cannot be undone.`)) {
+      return;
+    }
+    setBusyDocDelete(doc.id);
+    try {
+      await adminDeleteDocument(doc.id);
+      await loadDocuments();
+    } catch (e) {
+      setDocActionError(e.message);
+    } finally {
+      setBusyDocDelete(null);
     }
   }
 
@@ -539,6 +568,16 @@ export default function AdminPanel() {
               <span className="dash-eyebrow">Administration</span>
               <h1 className="dash-title">Admin Panel</h1>
             </div>
+            <button
+              type="button"
+              className={`dash-refresh-btn ${refreshing ? 'dash-refresh-btn--spinning' : ''}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Reload requests, users, and documents"
+            >
+              <span className="material-symbols-outlined">refresh</span>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
           </div>
 
           {/* Tab bar */}
@@ -818,6 +857,15 @@ export default function AdminPanel() {
                                   <button type="button" className="dash-menu-item" onClick={() => handleDownload(doc)}>
                                     <span className="material-symbols-outlined dash-menu-icon">download</span>
                                     Download
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="dash-menu-item"
+                                    disabled={busyDocDelete === doc.id}
+                                    onClick={() => handleDeleteDocument(doc)}
+                                  >
+                                    <span className="material-symbols-outlined dash-menu-icon">delete</span>
+                                    Delete
                                   </button>
                                 </div>
                               )}
@@ -1179,6 +1227,7 @@ export default function AdminPanel() {
               </div>
 
               <div className="admin-modal-body">
+                {docActionError && <p className="dash-action-error">{docActionError}</p>}
                 {userDocs.length === 0 ? (
                   <p className="dash-empty">This user has not uploaded any documents.</p>
                 ) : (
@@ -1230,6 +1279,15 @@ export default function AdminPanel() {
                                 >
                                   <span className="material-symbols-outlined">download</span>
                                   Download
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--reject"
+                                  disabled={busyDocDelete === doc.id}
+                                  onClick={() => handleDeleteDocument(doc)}
+                                >
+                                  <span className="material-symbols-outlined">delete</span>
+                                  Delete
                                 </button>
                               </div>
                             </td>

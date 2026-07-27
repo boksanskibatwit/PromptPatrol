@@ -2298,3 +2298,47 @@ body {
   white-space: nowrap;
   vertical-align: middle;
 }
+
+/* ── Refresh button (dashboard + admin panel) ─────────────────────────────── */
+
+.dash-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--charcoal);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--paper-depth);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.dash-refresh-btn:hover:not(:disabled) {
+  background: var(--paper-depth);
+}
+
+.dash-refresh-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.dash-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dash-refresh-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.dash-refresh-btn--spinning .material-symbols-outlined {
+  animation: dash-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes dash-refresh-spin {
+  to { transform: rotate(360deg); }
+}

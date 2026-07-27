@@ -65,6 +65,7 @@ export default function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [rowMenu, setRowMenu] = useState(null); // open row id
   const [busyId, setBusyId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const menuRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -143,6 +144,14 @@ export default function Dashboard() {
   async function handleSignOut() {
     await supabase.auth.signOut();
     navigate('/login');
+  }
+
+  // Re-fetch documents without a full page reload (which would bounce
+  // through login/MFA).
+  async function handleRefresh() {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
   }
 
   function handleUploadClick() {
@@ -311,6 +320,16 @@ export default function Dashboard() {
               </span>
             </div>
 
+            <button
+              type="button"
+              className={`dash-refresh-btn ${refreshing ? 'dash-refresh-btn--spinning' : ''}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="Refresh documents"
+            >
+              <span className="material-symbols-outlined">refresh</span>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
             <button
               type="button"
               className="dash-upload-btn"
