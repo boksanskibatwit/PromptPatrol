@@ -16,16 +16,20 @@ in Supabase Auth but banned from the app).
 
 import base64
 import json
+import logging
 from datetime import datetime, timezone
 
 import httpx
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel
 
+from app.core import s3
 from app.core.settings import settings
 from app.db.supabase import get_service_client
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger(__name__)
 
 SUPABASE_ADMIN_URL = f"{settings.supabase_url}/auth/v1/admin/users"
 AUTH_HEADERS = {
@@ -375,3 +379,41 @@ async def delete_user(
         )
 
     return {"detail": "User deleted."}
+
+
+@router.delete("/documents/{document_id}", status_code=status.HTTP_200_OK)
+async def delete_document(
+    document_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """Delete any user's document. Requires admin JWT.
+
+    Unlike DELETE /documents/{id} (which is scoped to the owner by RLS), this
+    runs with the service role so an admin can remove a document they do not
+    own. Removes the S3 artifact first, then the metadata row; the FK cascades
+    handle redacted_documents and redaction_candidates.
+    """
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = authorization.split(" ", 1)[1].strip()
+    _assert_admin(token)
+
+    svc = get_service_client()
+    result = (
+        svc.table("documents")
+        .select("id, file_type")
+        .eq("id", document_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    doc = result.data[0]
+
+    try:
+        s3.delete_redacted(s3.object_key(doc["id"], doc["file_type"]))
+    except (BotoCoreError, ClientError) as exc:
+        logger.exception("S3 delete failed for document %s", doc["id"])
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"S3 delete failed: {exc}")
+
+    svc.table("documents").delete().eq("id", document_id).execute()
+    return {"detail": "Document deleted."}
